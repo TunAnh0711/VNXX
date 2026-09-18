@@ -38,6 +38,48 @@ function updateBuffs(p, dt) {
   if (b.dmg > 0)     b.dmg     = Math.max(0, b.dmg - dt);
   if (b.shield > 0)  b.shield  = Math.max(0, b.shield - dt);
   if (b.berserk > 0) b.berserk = Math.max(0, b.berserk - dt);
+  
+  /* Xử lý các debuff đặc biệt */
+  if (b.slow > 0) {
+    b.slow -= dt;
+    if (b.slow <= 0) {
+      b.slow = 0;
+      p.slowFactor = 1;
+    }
+  }
+  
+  if (b.burn > 0) {
+    b.burn -= dt;
+    /* Gây damage burn mỗi giây */
+    if (p.burnDamage && p.burnDamage > 0) {
+      p.hp -= p.burnDamage * dt;
+      if (p.hp <= 0) p.alive = false;
+    }
+    if (b.burn <= 0) {
+      b.burn = 0;
+      p.burnDamage = 0;
+    }
+  }
+  
+  if (b.poisoned > 0) {
+    b.poisoned -= dt;
+    /* Gây damage poison mỗi giây */
+    if (p.poisonDamage && p.poisonDamage > 0) {
+      p.hp -= p.poisonDamage * dt;
+      if (p.hp <= 0) p.alive = false;
+    }
+    if (b.poisoned <= 0) {
+      b.poisoned = 0;
+      p.poisonDamage = 0;
+    }
+  }
+  
+  if (b.frozen > 0) {
+    b.frozen -= dt;
+    if (b.frozen <= 0) {
+      b.frozen = 0;
+    }
+  }
 
   if (b.shield > 0) p.shield = Math.max(0, 60 * (b.shield / 25));
   else p.shield = 0;
@@ -53,6 +95,11 @@ function updateMovement(W, p, dt) {
 
   /* Đang charge railgun → giảm tốc 50% */
   const chargeSlow = p.charging ? 0.5 : 1;
+  
+  /* Slow debuff */
+  const slowFactor = p.slowFactor && p.buffs.slow > 0 ? p.slowFactor : 1;
+  
+  const finalSpeed = targetSpeed * chargeSlow * slowFactor;
 
   if (p.dashTime > 0) {
     p.dashTime -= dt;
@@ -64,15 +111,15 @@ function updateMovement(W, p, dt) {
         rnd(-40, 40), rnd(-40, 40), .32, 4, '#28e0ff');
     }
   } else {
-    p.vx += mv.x * CFG.PLAYER.accel * berserk * chargeSlow * dt;
-    p.vy += mv.y * CFG.PLAYER.accel * berserk * chargeSlow * dt;
+    p.vx += mv.x * CFG.PLAYER.accel * berserk * finalSpeed / targetSpeed * dt;
+    p.vy += mv.y * CFG.PLAYER.accel * berserk * finalSpeed / targetSpeed * dt;
 
     const fr = CFG.PLAYER.friction * (mv.x === 0 && mv.y === 0 ? 1.6 : 1);
     p.vx -= p.vx * fr * dt;
     p.vy -= p.vy * fr * dt;
 
     const sp = Math.hypot(p.vx, p.vy);
-    const maxSp = targetSpeed * chargeSlow;
+    const maxSp = finalSpeed;
     if (sp > maxSp) {
       p.vx = p.vx / sp * maxSp;
       p.vy = p.vy / sp * maxSp;

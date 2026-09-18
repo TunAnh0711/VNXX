@@ -323,6 +323,145 @@ function updateEnemyAI(game, W, e, dt) {
       break;
     }
 
+    /* --- SHADOW ASSASSIN (Sát thủ lướt nhanh) --- */
+    case 'shadow_assassin': {
+      e.dashTimer -= dt;
+      const dashRange = e.dashRange || 380;
+      
+      if (e.dashing > 0) {
+        e.dashing -= dt;
+        e.x += e.dashDir.x * (e.dashSpeed || 720) * dt;
+        e.y += e.dashDir.y * (e.dashSpeed || 720) * dt;
+        if (Math.random() < .7) {
+          Fx.spawn(W.particles, e.x, e.y, 0, 0, .25, 4, '#aa00ff');
+        }
+        
+        /* Gây damage khi đang lướt và chạm player */
+        if (d < e.radius + W.player.radius) {
+          damagePlayer(game, W, e.damage, e);
+        }
+      } else {
+        /* Bắt đầu lướt khi trong tầm */
+        if (d < dashRange && e.dashTimer <= 0) {
+          e.dashTimer = e.dashCd || 2.0;
+          e.dashing = .18;
+          e.dashDir = { x: ux, y: uy };
+          Sound.sfx('dash');
+        }
+        ax = ux; ay = uy;
+        if (d < e.attackRange + e.radius) { ax *= .15; ay *= .15; }
+        contactAttack(game, W, e, d, dt);
+      }
+      break;
+    }
+
+    /* --- KAMIKAZE (Quái cảm tử) --- */
+    case 'kamikaze': {
+      if (e.fuse >= 0) {
+        /* Đang trong quá trình nổ */
+        e.fuse -= dt;
+        ax = 0; ay = 0;
+        e.radius += dt * 12;
+        if (e.fuse <= 0) { 
+          explodeEnemy(game, W, e); 
+          return; 
+        }
+      } else {
+        /* Đuổi theo player để nổ */
+        ax = ux; ay = uy;
+        if (d < e.attackRange + e.radius) {
+          e.fuse = e.fuse || 0.8;
+          Sound.sfx('alarm');
+        }
+      }
+      break;
+    }
+
+    /* --- SLOW THROWER (Ném thuốc làm chậm) --- */
+    case 'slow_thrower': {
+      const pref = e.preferred || 220;
+      if (d > pref * 1.1) { 
+        ax = ux; ay = uy; 
+      } else if (d < pref * .6) { 
+        ax = -ux; ay = -uy; 
+      } else {
+        const pa = Math.atan2(dy, dx) + Math.PI / 2;
+        const side = Math.sin(W.time * .5 + e.x * .01) > 0 ? 1 : -1;
+        ax = Math.cos(pa) * side * .6;
+        ay = Math.sin(pa) * side * .6;
+      }
+
+      e.attackTimer -= dt;
+      if (e.attackTimer <= 0 && d < e.attackRange) {
+        e.attackTimer = e.attackCd;
+        enemyShootSpecial(W, e, 'slow');
+      }
+      break;
+    }
+
+    /* --- FIRE SPITTER (Phun lửa) --- */
+    case 'fire_spitter': {
+      const pref = e.preferred || 150;
+      if (d > pref * 1.2) { 
+        ax = ux; ay = uy; 
+      } else if (d < pref * .5) { 
+        ax = -ux; ay = -uy; 
+      } else {
+        ax = ux * .3; ay = uy * .3;
+      }
+
+      e.attackTimer -= dt;
+      if (e.attackTimer <= 0 && d < e.attackRange) {
+        e.attackTimer = e.attackCd;
+        enemyShootSpecial(W, e, 'fire');
+      }
+      break;
+    }
+
+    /* --- ICE SPITTER (Phun băng) --- */
+    case 'ice_spitter': {
+      const pref = e.preferred || 200;
+      if (d > pref * 1.15) { 
+        ax = ux; ay = uy; 
+      } else if (d < pref * .6) { 
+        ax = -ux; ay = -uy; 
+      } else {
+        const pa = Math.atan2(dy, dx) + Math.PI / 2;
+        const side = Math.sin(W.time * .55 + e.x * .01) > 0 ? 1 : -1;
+        ax = Math.cos(pa) * side * .5;
+        ay = Math.sin(pa) * side * .5;
+      }
+
+      e.attackTimer -= dt;
+      if (e.attackTimer <= 0 && d < e.attackRange) {
+        e.attackTimer = e.attackCd;
+        enemyShootSpecial(W, e, 'ice');
+      }
+      break;
+    }
+
+    /* --- POISON BOMBER (Ném độc tạo vùng) --- */
+    case 'poison_bomber': {
+      const pref = e.preferred || 250;
+      if (d > pref * 1.1) { 
+        ax = ux; ay = uy; 
+      } else if (d < pref * .7) { 
+        ax = -ux; ay = -uy; 
+      } else {
+        const pa = Math.atan2(dy, dx) + Math.PI / 2;
+        const side = Math.sin(W.time * .45 + e.x * .01) > 0 ? 1 : -1;
+        ax = Math.cos(pa) * side * .5;
+        ay = Math.sin(pa) * side * .5;
+      }
+
+      e.attackTimer -= dt;
+      if (e.attackTimer <= 0 && d < e.attackRange) {
+        e.attackTimer = e.attackCd;
+        enemyShootSpecial(W, e, 'poison');
+      }
+      break;
+    }
+
     case 'exploder': {
       if (e.fuse >= 0) {
         e.fuse -= dt;
@@ -423,6 +562,64 @@ export function enemyShoot(W, e) {
   });
 
   Sound.sfx('shoot');
+}
+
+/* =========================================================
+   ENEMY SHOOT SPECIAL (các loại đạn đặc biệt: slow, fire, ice, poison)
+   ========================================================= */
+export function enemyShootSpecial(W, e, type) {
+  const p = W.player;
+  const a = Math.atan2(p.y - e.y, p.x - e.x) + rnd(-.08, .08);
+  const spd = (e.projectileSpeed || 280) * (W.lowGravity ? .6 : 1);
+  
+  let color = '#ffffff';
+  let radius = 6;
+  
+  switch (type) {
+    case 'slow':
+      color = '#aaddff';
+      radius = 7;
+      break;
+    case 'fire':
+      color = '#ffaa00';
+      radius = 6;
+      break;
+    case 'ice':
+      color = '#00ffff';
+      radius = 6;
+      break;
+    case 'poison':
+      color = '#88ff00';
+      radius = 8;
+      break;
+  }
+
+  W.projectiles.push({
+    x: e.x + Math.cos(a) * e.radius,
+    y: e.y + Math.sin(a) * e.radius,
+    vx: Math.cos(a) * spd,
+    vy: Math.sin(a) * spd,
+    r: radius,
+    damage: e.damage || 0,
+    owner: 'enemy',
+    specialType: type,
+    life: 3.0,
+    pierce: 0,
+    splash: type === 'poison' ? (e.poisonRadius || 70) : 0,
+    color: color,
+    knockback: 0,
+    hitSet: new Set(),
+    
+    /* Hiệu ứng đặc biệt */
+    slowDuration: type === 'slow' ? 2.5 : (type === 'ice' ? 2.0 : 0),
+    slowFactor: type === 'slow' ? 0.5 : (type === 'ice' ? 0.45 : 0),
+    dotDamage: type === 'fire' ? (e.dotDamage || 3) : 0,
+    dotDuration: type === 'fire' ? (e.dotDuration || 2.0) : 0,
+    poisonDamage: type === 'poison' ? (e.poisonDamage || 2) : 0,
+    poisonDuration: type === 'poison' ? (e.poisonDuration || 4.0) : 0
+  });
+
+  Sound.sfx(type === 'poison' ? 'poison' : (type === 'fire' ? 'flame' : 'shoot'));
 }
 
 /* =========================================================
