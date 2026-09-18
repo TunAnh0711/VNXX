@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<title>VNXX</title>
+
+<!-- CSS -->
+<link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/screens.css" />
+<link rel="stylesheet" href="css/menu.css" />
+<link rel="stylesheet" href="css/hud.css" />
+<link rel="stylesheet" href="css/lan.css" />
+<link rel="stylesheet" href="css/mobile.css" />
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- ==================== HUD ==================== -->
+  <div id="hud">
+    <div class="hud-tl">
+      <div class="bar hp" id="hpBar">
+        <div class="fill" id="hpFill"></div>
+        <span id="hpText">100 / 100</span>
+      </div>
+      <div class="bar shield hidden" id="shieldBar">
+        <div class="fill" id="shieldFill"></div>
+        <span id="shieldText"></span>
+      </div>
+      <div class="bar xp" id="xpBar">
+        <div class="fill" id="xpFill"></div>
+        <span id="xpText">LV 1</span>
+      </div>
+      <div class="hud-stats">
+        <span class="credits">💰 <b id="creditText">0</b></span>
+        <span class="shards">◆ <b id="shardText">0</b></span>
+      </div>
+    </div>
+
+    <div class="hud-tr">
+      <div id="waveText">WAVE 01 / 10</div>
+      <div id="objectiveText">TIÊU DIỆT TOÀN BỘ</div>
+      <div id="eventText"></div>
+      <div id="saveIndicator">✓ SAVED</div>
+      <button id="hudSettingsBtn" title="Cài đặt">⚙</button>
+    </div>
+
+    <div id="bossBar">
+      <div class="bn" id="bossName">BOSS</div>
+      <div class="bar"><div class="fill" id="bossFill"></div></div>
+    </div>
+
+    <div id="interactPrompt">[ SPACE ] MỞ RƯƠNG</div>
+    <div id="toast"></div>
+
+    <div class="hud-bottom">
+      <div class="keyhint">
+        <b>WASD/↑←↓→</b> DI CHUYỂN · <b>CHUỘT TRÁI</b> BẮN · <b>SPACE</b> TƯƠNG TÁC ·
+        <b>Q</b> ĐỔI VŨ KHÍ · <b>E</b> DASH · <b>R</b> MEDKIT · <b>TAB</b> TÚI ĐỒ · <b>ESC</b> TẠM DỪNG
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TUTORIAL ==================== -->
+  <div id="tutorial">
+    <div class="tut-box">
+      <h3>HƯỚNG DẪN CƠ BẢN</h3>
+      <div class="tut-line"><span>Di chuyển</span><b>WASD / ↑←↓→</b></div>
+      <div class="tut-line"><span>Hướng nhìn / ngắm</span><b>CHUỘT</b></div>
+      <div class="tut-line"><span>Tấn công / tương tác</span><b>CHUỘT TRÁI / SPACE</b></div>
+      <div class="tut-line"><span>Đổi vũ khí</span><b>Q</b></div>
+      <div class="tut-line"><span>Kỹ năng (dash)</span><b>E</b></div>
+      <div class="tut-line"><span>Dùng Medkit</span><b>R</b></div>
+      <div class="tut-line"><span>Túi đồ</span><b>TAB</b></div>
+      <div class="tut-line"><span>Tạm dừng</span><b>ESC</b></div>
+      <p class="hint" style="margin-top:20px">
+        SINH TỒN QUA CÁC ĐỢT QUÁI VẬT. THU THẬP TÀI NGUYÊN. NÂNG CẤP. ĐÁNH BẠI BOSS.
+      </p>
+      <button class="btn primary" id="tutClose" style="margin-top:18px">BẮT ĐẦU</button>
+    </div>
+  </div>
+
+  <div id="debugPanel"></div>
+
+  <!-- ==================== INTRO ==================== -->
+  <div class="screen active" id="screen-intro">
+    <div id="introContent" style="text-align:center"></div>
+    <div class="intro-skip">NHẤN ĐỂ BỎ QUA</div>
+  </div>
+
+  <!-- ==================== MAIN MENU ==================== -->
+  <div class="screen" id="screen-menu">
+    <div class="menu-bg">
+      <div class="glow"></div>
+      <div class="grid"></div>
+    </div>
+
+    <!-- Nút Fullscreen — góc trên phải -->
+    <button id="fsToggle" class="fs-btn" title="Toàn màn hình" aria-label="Toàn màn hình">
+      <span id="fsIcon">⛶</span>
+    </button>
+
+    <div class="menu-inner">
+      <h1 class="logo">VNXX</h1>
+      <p class="tagline">VIBECODE BY TUN0711</p>
+
+      <div class="menu-buttons">
+        <div class="menu-row">
+          <button class="btn primary" data-act="new">CHƠI MỚI</button>
+          <button class="btn" data-act="load">LOAD</button>
+        </div>
+        <button class="btn" data-act="settings">CÀI ĐẶT</button>
+        <button class="btn donate-btn" data-act="donate">💝 DONATE</button>
+        <button class="btn" data-act="ach">THÀNH TÍCH</button>
+        <button class="btn" id="menuLanBtn">🌐 CHƠI LAN</button>
+        <button class="btn danger" data-act="quit">THOÁT</button>
+      </div>
+    </div>
+    <div class="ver">VNXX v1.0 · BUILD 001</div>
+  </div>
+
+  <!-- ==================== PROFILE CREATION ==================== -->
+  <div class="screen" id="screen-profile">
+    <div class="panel" style="min-width:520px">
+      <button class="btn-back" data-act="back-menu">← QUAY LẠI</button>
+      <h2 style="margin-top:12px">TẠO PROFILE</h2>
+      <label for="profileName">TÊN NGƯỜI CHƠI</label>
+      <input type="text" id="profileName" maxlength="16"
+             placeholder="3 - 16 KÝ TỰ" autocomplete="off" spellcheck="false"/>
+      <h3>ĐỘ KHÓ</h3>
+      <div class="diff-grid" id="diffGrid"></div>
+      <div class="hint err" id="profileHint" style="min-height:18px"></div>
+      <button class="btn primary" id="createProfileBtn" style="margin-top:12px">
+        TẠO PROFILE
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== LOAD ==================== -->
+  <div class="screen" id="screen-load">
+    <div class="panel" style="min-width:600px">
+      <button class="btn-back" data-act="back-menu">← QUAY LẠI</button>
+      <h2 style="margin-top:12px">LOAD GAME</h2>
+      <div class="save-list" id="saveList"></div>
+    </div>
+  </div>
+
+  <!-- ==================== SETTINGS ==================== -->
+  <div class="screen" id="screen-settings">
+    <div class="panel" style="min-width:520px">
+      <button class="btn-back" data-act="back-settings">← QUAY LẠI</button>
+      <h2 style="margin-top:12px">SETTINGS</h2>
+
+      <div class="set-row"><span class="sl">🔊 ÂM THANH (SFX)</span>
+        <span class="sr"><span class="switch" id="swSfx"></span></span></div>
+      <div class="set-row"><span class="sl">🎵 NHẠC NỀN</span>
+        <span class="sr"><span class="switch" id="swMusic"></span></span></div>
+      <div class="set-row"><span class="sl">✨ HIỆU ỨNG / HẠT</span>
+        <span class="sr"><span class="switch" id="swFx"></span></span></div>
+      <div class="set-row"><span class="sl">📳 RUNG MÀN HÌNH</span>
+        <span class="sr"><span class="switch" id="swShake"></span></span></div>
+      <div class="set-row"><span class="sl">📱 CHẾ ĐỘ MOBILE (JOYSTICK)</span>
+        <span class="sr"><span class="switch" id="swMobile"></span></span></div>
+      <div class="set-row"><span class="sl">📊 CHẾ ĐỘ HIỆU NĂNG</span>
+        <span class="sr"><button class="btn small" id="perfBtn">AUTO</button></span></div>
+      <div class="set-row"><span class="sl">🔊 ÂM LƯỢNG TỔNG</span>
+        <span class="sr"><input type="range" id="volMaster" min="0" max="100" value="70"></span></div>
+      <div class="set-row"><span class="sl">🎵 ÂM LƯỢNG NHẠC</span>
+        <span class="sr"><input type="range" id="volMusic" min="0" max="100" value="45"></span></div>
+      <div class="set-row"><span class="sl">🔫 ÂM LƯỢNG SFX</span>
+        <span class="sr"><input type="range" id="volSfx" min="0" max="100" value="75"></span></div>
+      <div class="set-row"><span class="sl">📘 HƯỚNG DẪN</span>
+        <span class="sr"><button class="btn small" id="reTutBtn">BẬT LẠI</button></span></div>
+
+      <h3>⌨ ĐIỀU KHIỂN</h3>
+      <div class="keymap">
+        <span>Di chuyển</span><b>W A S D / ↑ ← ↓ →</b>
+        <span>Ngắm</span><b>CHUỘT</b>
+        <span>Tấn công</span><b>CHUỘT TRÁI (giữ)</b>
+        <span>Tương tác / mở rương</span><b>SPACE</b>
+        <span>Đổi vũ khí</span><b>Q</b>
+        <span>Dash / Kỹ năng</span><b>E</b>
+        <span>Dùng Medkit</span><b>R</b>
+        <span>Túi đồ</span><b>TAB</b>
+        <span>Tạm dừng</span><b>ESC</b>
+        <span>Debug</span><b>F3</b>
+      </div>
+
+      <h3>DỮ LIỆU</h3>
+      <button class="btn danger" id="wipeBtn">XÓA TOÀN BỘ DỮ LIỆU</button>
+      <button class="btn" id="reportBtn" style="margin-top:6px">📝 REPORT BUG</button>
+    </div>
+  </div>
+
+  <!-- ==================== BUG REPORT ==================== -->
+  <div class="screen" id="screen-bug">
+    <div class="panel" style="min-width:520px">
+      <button class="btn-back" data-act="back-bug">← QUAY LẠI</button>
+      <h2 style="margin-top:12px">REPORT BUG</h2>
+      <label>MÔ TẢ LỖI</label>
+      <textarea id="bugText" rows="5" placeholder="Mô tả lỗi bạn gặp..."></textarea>
+      <h3>DEBUG INFO</h3>
+      <textarea id="bugDebug" rows="8" readonly
+                style="color:var(--muted);font-size:11.5px"></textarea>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn small" id="copyDebugBtn">COPY DEBUG INFO</button>
+        <button class="btn small" id="closeBugBtn">ĐÓNG</button>
+      </div>
+      <div class="hint" id="copyHint"></div>
+    </div>
+  </div>
+
+  <!-- ==================== ACHIEVEMENTS ==================== -->
+  <div class="screen" id="screen-achievements">
+    <div class="panel" style="min-width:600px">
+      <button class="btn-back" data-act="back-menu">← QUAY LẠI</button>
+      <h2 style="margin-top:12px">THÀNH TÍCH</h2>
+      <div id="achList"></div>
+    </div>
+  </div>
+
+  <!-- ==================== DONATE ==================== -->
+  <div class="screen" id="screen-donate">
+    <div class="panel" style="min-width:420px;text-align:center">
+      <button class="btn-back" data-act="back-menu">← QUAY LẠI</button>
+      <h2 style="margin-top:12px;text-align:center">💝 ỦNG HỘ TUN</h2>
+
+      <div class="donate-qr-wrap">
+        <img src="assets/donate-qr.png" alt="QR Donate" class="donate-qr">
+      </div>
+
+      <p class="donate-msg">
+        Nếu bạn có lòng tốt, hãy ủng hộ <b>Tun</b> để Tun có thêm động lực
+        phát triển game, <b>Love u &lt;3</b>
+      </p>
+
+      <div class="donate-info">
+        <div class="stat-line"><span>Chủ TK</span><span>TRẦN ĐĂNG TUẤN ANH</span></div>
+        <div class="stat-line"><span>Số TK</span><span>320382</span></div>
+        <div class="stat-line"><span>Ngân hàng</span><span>MB Bank (TMCP Quân đội)</span></div>
+      </div>
+
+      <div class="hint" style="margin-top:18px">
+        Quét mã QR bằng app ngân hàng bất kỳ để ủng hộ. Cảm ơn bạn rất nhiều! 🙏
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAUSE ==================== -->
+  <div class="screen" id="screen-pause">
+    <div class="panel" style="min-width:380px">
+      <h2 style="text-align:center;font-size:26px;letter-spacing:8px">PAUSED</h2>
+      <button class="btn primary" data-act="resume">RESUME</button>
+      <button class="btn" data-act="pause-settings">SETTINGS</button>
+      <button class="btn" data-act="pause-save">SAVE</button>
+      <button class="btn danger" data-act="quit-menu">QUIT TO MENU</button>
+      <div class="hint" id="pauseStats" style="text-align:center"></div>
+    </div>
+  </div>
+
+  <!-- ==================== LEVEL UP ==================== -->
+  <div class="screen" id="screen-levelup">
+    <div class="panel" style="min-width:660px">
+      <h2 style="text-align:center;font-size:24px;letter-spacing:6px">LEVEL UP!</h2>
+      <p class="hint" style="text-align:center;margin-bottom:16px">CHỌN MỘT NÂNG CẤP</p>
+      <div class="card-grid" id="levelupCards"></div>
+    </div>
+  </div>
+
+  <!-- ==================== SHOP ==================== -->
+  <div class="screen" id="screen-shop">
+    <div class="panel" style="min-width:640px">
+      <h2>SHOP</h2>
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px;font-size:13px">
+        <span style="color:var(--amber)">💰 <b id="shopCredits">0</b> CREDITS</span>
+        <span style="color:var(--purple)">◆ <b id="shopShards">0</b> VOID SHARDS</span>
+      </div>
+      <div id="shopItems"></div>
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn small" id="shopRefresh">REFRESH (150 CR)</button>
+        <button class="btn small primary" id="shopClose">TIẾP TỤC →</button>
+      </div>
+      <div class="hint">SHOP LÀM MỚI NGẪU NHIÊN MỖI LẦN XUẤT HIỆN. VŨ KHÍ ĐÃ SỞ HỮU SẼ KHÔNG XUẤT HIỆN LẠI.</div>
+    </div>
+  </div>
+
+  <!-- ==================== INVENTORY ==================== -->
+  <div class="screen" id="screen-inventory">
+    <div class="panel" style="min-width:680px">
+      <h2>INVENTORY <span style="font-size:13px;color:var(--muted)" id="invCount"></span></h2>
+      <h3>VŨ KHÍ</h3>
+      <div class="inv-grid" id="invWeapons"></div>
+      <h3>MODULE <span style="font-size:11px;color:var(--muted)">(TỐI ĐA 4)</span></h3>
+      <div class="inv-grid" id="invModules"></div>
+      <h3>TIÊU HAO</h3>
+      <div class="inv-grid" id="invConsumables"></div>
+      <div style="margin-top:16px">
+        <button class="btn small primary" id="invClose">ĐÓNG</button>
+      </div>
+      <div class="hint">CLICK VÀO VẬT PHẨM ĐỂ TRANG BỊ / SỬ DỤNG / BÁN. NHẤN TAB ĐỂ ĐÓNG NHANH.</div>
+    </div>
+  </div>
+
+  <!-- ==================== EVENT ==================== -->
+  <div class="screen" id="screen-event">
+    <div class="panel" style="min-width:480px;text-align:center">
+      <h2 style="color:var(--amber);text-align:center">⚠ TÍN HIỆU KHÔNG XÁC ĐỊNH</h2>
+      <p class="hint" style="margin:16px 0 22px" id="eventDesc">
+        Một tín hiệu lạ đang phát ra từ khu vực gần đây...
+      </p>
+      <button class="btn primary" id="eventYes">ĐIỀU TRA</button>
+      <button class="btn" id="eventNo">BỎ QUA</button>
+    </div>
+  </div>
+
+  <!-- ==================== GAME OVER ==================== -->
+  <div class="screen" id="screen-gameover">
+    <div class="panel" style="min-width:440px">
+      <div class="big-title dead">YOU DIED</div>
+      <div id="goStats" style="margin:22px 0"></div>
+      <button class="btn primary" id="goRevive">REVIVE (1 TOKEN)</button>
+      <button class="btn" id="goRetry">CHƠI LẠI TỪ ĐẦU</button>
+      <button class="btn" id="goMenu">MAIN MENU</button>
+    </div>
+  </div>
+
+  <!-- ==================== HARDCORE DEAD ==================== -->
+  <div class="screen" id="screen-hardcore">
+    <div class="panel" style="min-width:460px">
+      <div class="big-title hc">☠ RUN FAILED</div>
+      <div id="hcStats" style="margin:22px 0"></div>
+      <button class="btn" id="hcWatch">THEO DÕI THẾ GIỚI</button>
+      <button class="btn primary" id="hcMenu">VỀ MAIN MENU</button>
+    </div>
+  </div>
+
+  <!-- ==================== STAGE CLEAR ==================== -->
+  <div class="screen" id="screen-stageclear">
+    <div class="panel" style="min-width:480px">
+      <div class="big-title clear">STAGE COMPLETE</div>
+      <div id="scStats" style="margin:22px 0"></div>
+      <div id="scRewards"></div>
+      <button class="btn primary" id="scContinue" style="margin-top:20px">CONTINUE</button>
+    </div>
+  </div>
+
+  <!-- ==================== LOADING ==================== -->
+  <div class="screen" id="screen-loading">
+    <div>
+      <div class="load-txt" id="loadTxt">LOADING...</div>
+      <div class="load-sub" id="loadSub"></div>
+    </div>
+  </div>
+
+  <!-- ==================== LAN ==================== -->
+  <div class="screen" id="screen-lan">
+    <div class="panel" style="min-width:480px">
+      <button class="btn-back" id="lanBack">← QUAY LẠI</button>
+      <h2 style="margin-top:12px">CHƠI LAN</h2>
+
+      <div id="lanMain">
+        <button class="btn primary" id="lanHostBtn">TẠO PHÒNG (HOST)</button>
+        <div style="margin-top:16px">
+          <label>NHẬP MÃ PHÒNG</label>
+          <input type="text" id="lanCodeInput" maxlength="4"
+                 placeholder="ABCD" autocomplete="off" spellcheck="false">
+          <button class="btn primary" id="lanJoinBtn" style="margin-top:12px">VÀO PHÒNG</button>
+        </div>
+        <div class="hint" id="lanHint">Cùng mạng LAN. Host tạo phòng → đưa mã cho bạn bè.</div>
+      </div>
+
+      <div id="lanRoom" class="hidden">
+        <h3>MÃ PHÒNG</h3>
+        <div id="lanRoomCode">----</div>
+        <div class="hint" style="text-align:center">CHIA SẺ MÃ NÀY CHO BẠN BÈ</div>
+        <h3>NGƯỜI CHƠI</h3>
+        <div id="lanPlayers"></div>
+        <button class="btn danger" id="lanCloseRoom" style="margin-top:16px">ĐÓNG PHÒNG</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MOBILE CONTROLS ==================== -->
+  <div id="mobileControls" class="hidden">
+    <!-- Joystick -->
+    <div id="joystickZone">
+      <div id="joystickBase">
+        <div id="joystickKnob"></div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div id="mobileButtons">
+      <button class="mob-btn" id="mobInv"      aria-label="Túi đồ">🎒</button>
+      <button class="mob-btn" id="mobDash"     aria-label="Dash">⚡</button>
+      <button class="mob-btn" id="mobInteract" aria-label="Tương tác">✋</button>
+      <button class="mob-btn" id="mobAttack"   aria-label="Tấn công">🔥</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ENTRY POINT ==================== -->
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

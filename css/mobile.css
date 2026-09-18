@@ -1,0 +1,465 @@
+/* =========================================================
+   VNXX — MOBILE CONTROLS + RESPONSIVE
+   Virtual joystick + action buttons + HUD scale cho mobile.
+   ========================================================= */
+
+/* ===================== CONTAINER ===================== */
+#mobileControls {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+#mobileControls.hidden {
+  display: none !important;
+}
+
+/* Ẩn joystick khi pause / inventory / shop / levelup / settings */
+body.ui-open #mobileControls {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+body.ui-open #mobileControls * {
+  pointer-events: none !important;
+}
+
+/* ===================== JOYSTICK ZONE ===================== */
+#joystickZone {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 40vw;
+  height: 40vh;
+  max-width: 320px;
+  max-height: 320px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+#joystickBase {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100px;
+  height: 100px;
+  margin-left: -50px;
+  margin-top: -50px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(40, 224, 255, 0.10),
+    rgba(40, 224, 255, 0.03) 60%,
+    transparent 75%);
+  border: 2px solid rgba(40, 224, 255, 0.35);
+  box-shadow: 0 0 20px rgba(40, 224, 255, 0.2),
+              inset 0 0 20px rgba(40, 224, 255, 0.1);
+  transition: left 0.08s ease-out, top 0.08s ease-out;
+}
+
+#joystickKnob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(40, 224, 255, 0.9),
+    rgba(40, 224, 255, 0.4) 70%,
+    rgba(40, 224, 255, 0.2));
+  border: 2px solid var(--cyan);
+  box-shadow: 0 0 15px rgba(40, 224, 255, 0.6);
+  transform: translate(-50%, -50%);
+  transition: transform 0.05s linear;
+  pointer-events: none;
+}
+
+/* ===================== BUTTONS ===================== */
+#mobileButtons {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  width: 170px;
+  height: 170px;
+  pointer-events: none;
+}
+
+.mob-btn {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--cyan);
+  background: radial-gradient(circle,
+    rgba(40, 224, 255, 0.25),
+    rgba(8, 20, 30, 0.75));
+  color: var(--cyan);
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+  transition: transform 0.08s, box-shadow 0.12s;
+  box-shadow: 0 0 12px rgba(40, 224, 255, 0.35),
+              inset 0 0 12px rgba(40, 224, 255, 0.15);
+  text-shadow: 0 0 8px rgba(40, 224, 255, 0.8);
+  padding: 0;
+  cursor: pointer;
+}
+
+.mob-btn.pressed {
+  transform: scale(0.9);
+  box-shadow: 0 0 22px rgba(40, 224, 255, 0.9),
+              inset 0 0 16px rgba(40, 224, 255, 0.4);
+}
+
+/* Attack: to nhất, góc dưới phải */
+#mobAttack {
+  right: 0;
+  bottom: 0;
+  width: 72px;
+  height: 72px;
+  font-size: 28px;
+  border-color: var(--red);
+  color: #ff8d9b;
+  background: radial-gradient(circle,
+    rgba(255, 59, 82, 0.3),
+    rgba(30, 8, 14, 0.8));
+  box-shadow: 0 0 18px rgba(255, 59, 82, 0.5),
+              inset 0 0 14px rgba(255, 59, 82, 0.2);
+  text-shadow: 0 0 10px rgba(255, 59, 82, 0.9);
+}
+#mobAttack.pressed {
+  box-shadow: 0 0 30px rgba(255, 59, 82, 1),
+              inset 0 0 20px rgba(255, 59, 82, 0.5);
+}
+
+/* Interact: vàng */
+#mobInteract {
+  right: 80px;
+  bottom: 8px;
+  border-color: var(--amber);
+  color: var(--amber);
+  background: radial-gradient(circle,
+    rgba(255, 196, 77, 0.25),
+    rgba(30, 20, 8, 0.75));
+  box-shadow: 0 0 12px rgba(255, 196, 77, 0.4),
+              inset 0 0 12px rgba(255, 196, 77, 0.15);
+  text-shadow: 0 0 8px rgba(255, 196, 77, 0.8);
+}
+
+/* Dash: tím */
+#mobDash {
+  right: 16px;
+  bottom: 84px;
+  border-color: var(--purple);
+  color: var(--purple);
+  background: radial-gradient(circle,
+    rgba(160, 107, 255, 0.25),
+    rgba(20, 10, 30, 0.75));
+  box-shadow: 0 0 12px rgba(160, 107, 255, 0.4),
+              inset 0 0 12px rgba(160, 107, 255, 0.15);
+  text-shadow: 0 0 8px rgba(160, 107, 255, 0.8);
+}
+
+/* Inventory: xanh lá */
+#mobInv {
+  right: 96px;
+  bottom: 74px;
+  border-color: var(--green);
+  color: var(--green);
+  background: radial-gradient(circle,
+    rgba(57, 255, 158, 0.22),
+    rgba(8, 25, 16, 0.75));
+  box-shadow: 0 0 12px rgba(57, 255, 158, 0.4),
+              inset 0 0 12px rgba(57, 255, 158, 0.15);
+  text-shadow: 0 0 8px rgba(57, 255, 158, 0.8);
+}
+
+/* =========================================================
+   MOBILE MODE — RESPONSIVE HUD
+   Chỉ áp dụng khi body.mobile-mode (được bật bởi Settings).
+   ========================================================= */
+
+/* ===================== HUD nhỏ hơn ===================== */
+body.mobile-mode .hud-tl {
+  top: 8px;
+  left: 8px;
+  width: min(240px, 45vw);
+}
+
+body.mobile-mode .bar {
+  height: 12px;
+  margin-bottom: 3px;
+}
+
+body.mobile-mode .bar.xp {
+  height: 8px;
+}
+
+body.mobile-mode .bar span {
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+body.mobile-mode .hud-stats {
+  font-size: 10.5px;
+  gap: 10px;
+  margin-top: 1px;
+}
+
+/* ===================== Top-right nhỏ hơn ===================== */
+body.mobile-mode .hud-tr {
+  top: 8px;
+  right: 8px;
+  font-size: 10px;
+}
+
+body.mobile-mode #waveText {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+}
+
+body.mobile-mode #objectiveText,
+body.mobile-mode #eventText {
+  font-size: 9.5px;
+  letter-spacing: 0.8px;
+  margin-top: 2px;
+}
+
+body.mobile-mode #saveIndicator {
+  font-size: 9px;
+  margin-top: 4px;
+}
+
+/* ===================== Nút settings HUD ===================== */
+body.mobile-mode #hudSettingsBtn {
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+/* ===================== Boss bar nhỏ hơn ===================== */
+body.mobile-mode #bossBar {
+  width: min(90vw, 480px);
+  top: 60px;
+}
+
+body.mobile-mode #bossBar .bn {
+  font-size: 11px;
+  letter-spacing: 3px;
+  margin-bottom: 3px;
+}
+
+body.mobile-mode #bossBar .bar {
+  height: 14px;
+}
+
+/* ===================== Keyhint: ẩn trên mobile ===================== */
+body.mobile-mode .hud-bottom {
+  display: none !important;
+}
+
+/* ===================== Interact prompt cao hơn ===================== */
+body.mobile-mode #interactPrompt {
+  bottom: 140px;
+  font-size: 11px;
+  padding: 6px 12px;
+  letter-spacing: 1.5px;
+}
+
+/* ===================== Toast nhỏ hơn ===================== */
+body.mobile-mode #toast {
+  top: 70px;
+  gap: 4px;
+}
+
+body.mobile-mode .toast-item {
+  font-size: 10.5px;
+  padding: 5px 12px;
+  letter-spacing: 1px;
+}
+
+/* ===================== Panel toàn màn hình trên mobile ===================== */
+@media (max-width: 640px) {
+  body.mobile-mode .panel {
+    min-width: auto !important;
+    width: 92vw;
+    max-width: 92vw;
+    max-height: 90vh;
+    padding: 20px 18px;
+    border-radius: 8px;
+  }
+
+  body.mobile-mode .panel h2 {
+    font-size: 16px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  body.mobile-mode .panel h3 {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    margin: 12px 0 6px;
+  }
+
+  body.mobile-mode .btn {
+    padding: 10px 14px;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+  }
+
+  body.mobile-mode .btn.small {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  /* Level up cards: 1 cột trên mobile */
+  body.mobile-mode .card-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  body.mobile-mode .card {
+    padding: 14px 12px;
+  }
+
+  body.mobile-mode .card .ci { font-size: 20px; margin-bottom: 6px; }
+  body.mobile-mode .card .cn { font-size: 12px; }
+  body.mobile-mode .card .cd { font-size: 10.5px; margin-top: 5px; }
+
+  /* Inventory grid: 2 cột */
+  body.mobile-mode .inv-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+
+  body.mobile-mode .inv-slot {
+    padding: 8px;
+    min-height: 60px;
+  }
+
+  body.mobile-mode .inv-slot .isn { font-size: 11px; }
+  body.mobile-mode .inv-slot .isd { font-size: 9.5px; }
+
+  /* Set row gọn hơn */
+  body.mobile-mode .set-row {
+    padding: 8px 0;
+  }
+
+  body.mobile-mode .set-row .sl {
+    font-size: 11.5px;
+    letter-spacing: 1px;
+  }
+
+  /* Menu chính gọn */
+  body.mobile-mode .menu-buttons {
+    max-width: 280px;
+    gap: 10px;
+  }
+
+  body.mobile-mode .menu-buttons button {
+    padding: 12px 16px;
+    font-size: 12px;
+    letter-spacing: 3px;
+  }
+
+  body.mobile-mode .logo {
+    font-size: clamp(48px, 14vw, 90px);
+  }
+
+  body.mobile-mode .tagline {
+    font-size: 10px;
+    letter-spacing: 6px;
+    margin: 10px 0 28px;
+  }
+}
+
+/* ===================== Màn hình ngắn (landscape) ===================== */
+@media (max-height: 450px) and (orientation: landscape) {
+  body.mobile-mode .hud-tl {
+    width: min(180px, 28vw);
+  }
+
+  body.mobile-mode .bar { height: 10px; }
+  body.mobile-mode .bar.xp { height: 7px; }
+
+  body.mobile-mode #joystickZone {
+    width: 32vw;
+    height: 60vh;
+  }
+
+  body.mobile-mode #mobileButtons {
+    width: 150px;
+    height: 150px;
+  }
+
+  body.mobile-mode .mob-btn {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+
+  body.mobile-mode #mobAttack {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+
+  body.mobile-mode #joystickBase {
+    width: 84px;
+    height: 84px;
+    margin-left: -42px;
+    margin-top: -42px;
+  }
+
+  body.mobile-mode #joystickKnob {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* ===================== iPad / tablet ===================== */
+@media (min-width: 641px) and (max-width: 1024px) {
+  body.mobile-mode .panel {
+    max-width: 80vw;
+  }
+
+  body.mobile-mode .hud-tl {
+    width: min(300px, 38vw);
+  }
+
+  body.mobile-mode .card-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ===================== Safe area (notch iPhone) ===================== */
+@supports (padding: max(0px)) {
+  body.mobile-mode .hud-tl {
+    top: max(8px, env(safe-area-inset-top));
+    left: max(8px, env(safe-area-inset-left));
+  }
+
+  body.mobile-mode .hud-tr {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+  }
+
+  body.mobile-mode #joystickZone {
+    bottom: max(0px, env(safe-area-inset-bottom));
+    left: max(0px, env(safe-area-inset-left));
+  }
+
+  body.mobile-mode #mobileButtons {
+    bottom: max(16px, env(safe-area-inset-bottom));
+    right: max(16px, env(safe-area-inset-right));
+  }
+}

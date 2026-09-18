@@ -1,0 +1,249 @@
+/* =========================================================
+   VNXX — HUD
+   In-game overlay: HP/XP bar, stats, wave, boss bar,
+   interact prompt, toast, keyhint, debug panel.
+   ========================================================= */
+
+/* ===================== HUD CONTAINER ===================== */
+#hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  display: none;
+}
+#hud.on { display: block; }
+
+/* ===================== TOP-LEFT (bars & stats) ===================== */
+.hud-tl {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  width: min(340px, 32vw);
+}
+
+.bar {
+  position: relative;
+  height: 16px;
+  border: 1px solid var(--line);
+  background: rgba(4, 8, 14, .82);
+  margin-bottom: 5px;
+  overflow: hidden;
+  border-radius: 2px;
+}
+.bar .fill {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  transition: width .12s linear;
+}
+.bar span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  letter-spacing: 1.5px;
+  color: #eafcff;
+  text-shadow: 0 0 5px #000, 0 0 3px #000;
+}
+
+/* HP */
+.bar.hp .fill {
+  background: linear-gradient(90deg, #8b0f22, #ff3b52);
+  box-shadow: 0 0 12px rgba(255, 59, 82, .5);
+}
+.bar.hp.low .fill { animation: lowhp .7s infinite; }
+@keyframes lowhp {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .45; }
+}
+
+/* XP */
+.bar.xp { height: 11px; }
+.bar.xp .fill {
+  background: linear-gradient(90deg, #0a6f8a, #28e0ff);
+  box-shadow: 0 0 12px rgba(40, 224, 255, .5);
+}
+
+/* SHIELD */
+.bar.shield .fill {
+  background: linear-gradient(90deg, #1a4f8a, #5aa9ff);
+}
+
+/* Stats line (credits / shards) */
+.hud-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12.5px;
+  letter-spacing: 1.5px;
+  color: var(--txt);
+  margin-top: 2px;
+}
+.hud-stats .credits { color: var(--amber); }
+.hud-stats .shards  { color: var(--purple); }
+
+/* ===================== TOP-RIGHT (wave info) ===================== */
+.hud-tr {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  text-align: right;
+  font-size: 12.5px;
+  letter-spacing: 2px;
+}
+
+#waveText {
+  color: var(--cyan);
+  font-size: 14px;
+  text-shadow: 0 0 10px rgba(40, 224, 255, .5);
+}
+#objectiveText {
+  color: var(--muted);
+  font-size: 11.5px;
+  margin-top: 5px;
+  letter-spacing: 1px;
+}
+#eventText {
+  color: var(--amber);
+  font-size: 11.5px;
+  margin-top: 4px;
+  letter-spacing: 1px;
+}
+
+#saveIndicator {
+  color: var(--green);
+  font-size: 10.5px;
+  margin-top: 8px;
+  opacity: 0;
+  transition: opacity .3s;
+  letter-spacing: 2px;
+}
+#saveIndicator.on { opacity: 1; }
+
+#hudSettingsBtn {
+  pointer-events: auto;
+  margin-top: 10px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  background: rgba(6, 12, 20, .8);
+  color: var(--muted);
+  border-radius: 3px;
+  font-size: 16px;
+}
+#hudSettingsBtn:hover {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+/* ===================== BOTTOM (keyhint) ===================== */
+.hud-bottom {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+.keyhint {
+  font-size: 10.5px;
+  letter-spacing: 1.4px;
+  color: #3c5d70;
+  white-space: nowrap;
+}
+.keyhint b { color: var(--cyan); font-weight: 500; }
+
+/* ===================== INTERACT PROMPT ===================== */
+#interactPrompt {
+  position: absolute;
+  bottom: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12.5px;
+  letter-spacing: 2px;
+  color: #eafcff;
+  background: rgba(6, 16, 24, .88);
+  border: 1px solid var(--cyan2);
+  padding: 7px 16px;
+  border-radius: 2px;
+  opacity: 0;
+  transition: opacity .18s;
+  text-shadow: 0 0 8px rgba(40, 224, 255, .6);
+}
+#interactPrompt.on { opacity: 1; }
+
+/* ===================== TOASTS ===================== */
+#toast {
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.toast-item {
+  background: rgba(6, 16, 24, .9);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--cyan);
+  padding: 7px 16px;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  color: var(--txt);
+  animation: toastin .25s;
+  box-shadow: 0 0 20px rgba(0, 0, 0, .6);
+}
+@keyframes toastin {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ===================== BOSS BAR ===================== */
+#bossBar {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(620px, 62vw);
+  opacity: 0;
+  transition: opacity .3s;
+}
+#bossBar.on { opacity: 1; }
+
+#bossBar .bn {
+  text-align: center;
+  font-size: 13px;
+  letter-spacing: 5px;
+  color: #ff8d9b;
+  margin-bottom: 6px;
+  text-shadow: 0 0 14px rgba(255, 59, 82, .7);
+}
+#bossBar .bar {
+  height: 20px;
+  border-color: #5a1a24;
+}
+#bossBar .bar .fill {
+  background: linear-gradient(90deg, #5a0a18, #ff3b52);
+  box-shadow: 0 0 18px rgba(255, 59, 82, .6);
+}
+
+/* ===================== DEBUG PANEL ===================== */
+#debugPanel {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 12;
+  font-size: 11px;
+  color: #7dffb0;
+  background: rgba(0, 10, 6, .82);
+  border: 1px solid #1c4436;
+  padding: 8px 12px;
+  white-space: pre;
+  display: none;
+  line-height: 1.5;
+  pointer-events: none;
+}
+#debugPanel.on { display: block; }

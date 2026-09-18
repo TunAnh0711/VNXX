@@ -1,0 +1,24 @@
+/* =========================================================
+   VNXX — LAN
+   CSS bổ sung riêng cho màn hình chơi LAN.
+   Kế thừa toàn bộ style từ screens.css (panel, btn, input...).
+   ========================================================= */
+
+/* Mã phòng hiển thị lớn */
+#lanRoomCode {
+  font-size: 52px;
+  letter-spacing: 14px;
+  color: var(--cyan);
+  text-align: center;
+  padding: 18px;
+  text-shadow: 0 0 20px rgba(40, 224, 255, .7);
+  font-weight: 700;
+}
+
+/* Input mã phòng — uppercase, ký tự rộng */
+#lanCodeInput {
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  text-align: center;
+  font-size: 22px;
+}

@@ -1,0 +1,164 @@
+/* =========================================================
+   VNXX — BASE (UPGRADED)
+   Modern Reset, Cyberpunk Variables, CRT Effects, Performance
+   ========================================================= */
+
+:root {
+  /* HỆ THỐNG MÀU SẮC */
+  --bg:         #020407;
+  --panel:      rgba(8, 13, 21, 0.65);
+  --panel2:     rgba(12, 20, 31, 0.85);
+  --line:       #16283a;
+
+  /* MÀU CHỦ ĐẠO & GLOW */
+  --cyan:       #28e0ff;
+  --cyan2:      #0aa8cc;
+  --cyan-glow:  rgba(40, 224, 255, 0.6);
+  --dim:        #0b3a49;
+
+  /* MÀU TRẠNG THÁI */
+  --red:        #ff3b52;
+  --red-glow:   rgba(255, 59, 82, 0.6);
+  --green:      #39ff9e;
+  --amber:      #ffc44d;
+  --purple:     #a06bff;
+
+  /* TYPOGRAPHY */
+  --txt:        #e0f2fe;
+  --muted:      #5d7d92;
+  --font:       'Consolas', 'SF Mono', 'Roboto Mono', 'Courier New', monospace;
+
+  /* HIỆU ỨNG & KÍCH THƯỚC */
+  --blur-md:    blur(12px);
+  --radius-sm:  4px;
+  --radius-md:  8px;
+  --transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --shadow-neon: 0 0 10px var(--cyan-glow), 0 0 20px rgba(40, 224, 255, 0.2);
+}
+
+/* ===================== RESET & CƠ BẢN ===================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle at 50% 0%, #0a1526 0%, var(--bg) 70%);
+  color: var(--txt);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+
+  /* Text rendering optimizations */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  /* Prevent accidental text selection during gameplay */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ===================== LAYOUT ===================== */
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+/* Hiệu ứng Scanline CRT giả lập */
+#app::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.15) 50%,
+    rgba(0, 0, 0, 0.15)
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+/* ===================== GAME CANVAS ===================== */
+canvas#game {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  /* Tối ưu hiệu năng */
+  contain: strict;
+  will-change: transform;
+
+  /* Ẩn con trỏ — crosshair được vẽ trên canvas bằng JS */
+  cursor: none;
+}
+
+/* ===================== UI COMPONENTS BASE ===================== */
+.hidden {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+button {
+  font-family: var(--font);
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--txt);
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+  backdrop-filter: var(--blur-md);
+  -webkit-backdrop-filter: var(--blur-md);
+  outline: none;
+}
+
+button:hover {
+  border-color: var(--cyan);
+  box-shadow: var(--shadow-neon);
+  color: var(--cyan);
+  background: var(--panel2);
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+button:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--cyan);
+}
+
+/* ===================== SCROLLBAR TỐI ƯU ===================== */
+html { scrollbar-gutter: stable; }
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(5, 10, 17, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--cyan2);
+  box-shadow: 0 0 10px var(--cyan-glow);
+}
