@@ -601,8 +601,10 @@ const Game = {
 
     setTimeout(() => {
       this.buildWorld(profile, isNew);
-      this.setState(isBossWave(profile.currentStage, profile.currentWave)
-        ? ST.BOSS : ST.PLAYING);
+      /* Kiểm tra nếu đang ở wave boss (wave > số wave thường của stage) */
+      const stage = getStage(profile.currentStage);
+      const isBossNow = profile.currentWave > stage.waves;
+      this.setState(isBossNow ? ST.BOSS : ST.PLAYING);
       hideAllScreens();
       Sound.startMusic(stage.music || 'game');
       if (Settings.get('tutorial') && isNew) {
