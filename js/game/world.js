@@ -9,6 +9,14 @@ import { clamp, lerp, rnd, makeRNG } from '../core/utils.js';
 import { getStage } from '../data/stages.js';
 
 /* =========================================================
+   HELPER: PICK RANDOM ITEM FROM ARRAY
+   ========================================================= */
+function pick(array) {
+  if (!array || array.length === 0) return null;
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+/* =========================================================
    BUILD WORLD
    ========================================================= */
 export function buildWorld(game, profile, isNew) {
