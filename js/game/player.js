@@ -39,6 +39,32 @@ function updateBuffs(p, dt) {
   if (b.shield > 0)  b.shield  = Math.max(0, b.shield - dt);
   if (b.berserk > 0) b.berserk = Math.max(0, b.berserk - dt);
   
+  /* Buff tốc độ chạy */
+  if (b.speedBoost > 0) {
+    b.speedBoost -= dt;
+    if (b.speedBoost <= 0) {
+      b.speedBoost = 0;
+      p.speedBoostFactor = 1;
+    }
+  }
+  
+  /* Buff tốc bắn */
+  if (b.rapidFire > 0) {
+    b.rapidFire -= dt;
+    if (b.rapidFire <= 0) {
+      b.rapidFire = 0;
+      p.rapidFireFactor = 1;
+    }
+  }
+  
+  /* Buff bất tử */
+  if (b.invincible > 0) {
+    b.invincible -= dt;
+    if (b.invincible <= 0) {
+      b.invincible = 0;
+    }
+  }
+  
   /* Xử lý các debuff đặc biệt */
   if (b.slow > 0) {
     b.slow -= dt;
@@ -91,7 +117,10 @@ function updateBuffs(p, dt) {
 function updateMovement(W, p, dt) {
   const mv = Input.moveVector();
   const berserk = p.buffs.berserk > 0 ? 1.3 : 1;
-  const targetSpeed = p.speed * berserk;
+  
+  /* Buff tốc độ chạy */
+  const speedBoost = p.buffs.speedBoost > 0 ? p.speedBoostFactor : 1;
+  const targetSpeed = p.speed * berserk * speedBoost;
 
   /* Đang charge railgun → giảm tốc 50% */
   const chargeSlow = p.charging ? 0.5 : 1;
@@ -440,7 +469,11 @@ export function playerAttack(game, W, p) {
   if (w.charge > 0) return;
 
   const berserk = p.buffs.berserk > 0 ? .55 : 1;
-  const cd = 1 / (w.fireRate * (1 + p.up.attackSpeedMul) * berserk);
+  
+  /* Buff tốc bắn rapid fire */
+  const rapidFireFactor = p.buffs.rapidFire > 0 ? p.rapidFireFactor || 2 : 1;
+  
+  const cd = 1 / (w.fireRate * (1 + p.up.attackSpeedMul) * berserk * rapidFireFactor);
 
   p.cooldown = cd;
   p.attackAnim = .16;
@@ -503,7 +536,10 @@ function rangedAttack(game, W, p, w, dmgBase, critC, critM) {
   const snd = id === 'shotgun' ? 'shotgun' : (id === 'sniper' ? 'sniper' : 'shoot');
   Sound.sfx(snd);
 
-  const count = w.projectileCount;
+  /* Buff triple shot: nhân số đạn */
+  const tripleShotMul = p.buffs.tripleShot > 0 ? 3 : 1;
+  const count = w.projectileCount * tripleShotMul;
+  
   const spd = w.projectileSpeed *
     (1 + p.up.rangeMul * .4) *
     (W.lowGravity ? .6 : 1);

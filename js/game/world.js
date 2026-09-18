@@ -163,29 +163,71 @@ function createPlayer(game, profile, isNew) {
 
 /* =========================================================
    GEN OBSTACLES (deterministic theo seed + stage id)
+   Mỗi stage có theme obstacles khác nhau:
+   - Stage 1: container, pillar, machine (abandoned facility)
+   - Stage 2: crate, furnace, conveyor (industrial zone)
+   - Stage 3: barrier, neon_pillar, holo_wall (neon city)
+   - Stage 4: debris, wreck, rubble (dead sector)
+   - Stage 5: void_crystal, dark_pillar, energy_field (void core)
    ========================================================= */
 export function genObstacles(seed, stage, w, h) {
   const rng = makeRNG(seed + stage.id * 7919);
   const obs = [];
-  const count = 10 + stage.id * 3;
-
+  
+  /* Số lượng obstacles tăng theo stage */
+  const count = 12 + stage.id * 4;
+  
+  /* Pool obstacles theo stage */
+  let obstaclePool = ['container', 'pillar', 'machine'];
+  if (stage.id === 2) obstaclePool = ['crate', 'furnace', 'conveyor', 'barrel'];
+  else if (stage.id === 3) obstaclePool = ['barrier', 'neon_pillar', 'holo_wall', 'sign'];
+  else if (stage.id === 4) obstaclePool = ['debris', 'wreck', 'rubble', 'broken_wall'];
+  else if (stage.id === 5) obstaclePool = ['void_crystal', 'dark_pillar', 'energy_field', 'core_fragment'];
+  
+  /* Thêm cây/bụi cây cho stage 2, 3 (có địa hình tự nhiên) */
+  const hasVegetation = stage.id === 2 || stage.id === 3;
+  const vegetationCount = hasVegetation ? Math.floor(count * 0.3) : 0;
+  
   for (let i = 0; i < count; i++) {
+    const isVegetation = hasVegetation && i < vegetationCount;
+    
+    /* Kích thước obstacles */
     const bw = rng() < .5 ? rnd(70, 180) : rnd(40, 90);
     const bh = rng() < .5 ? rnd(70, 180) : rnd(40, 90);
     const x = 60 + rng() * (w - 120 - bw);
     const y = 60 + rng() * (h - 120 - bh);
 
     /* Chừa vùng an toàn giữa map để player spawn */
-    if (Math.abs(x + bw / 2 - w / 2) < 260 &&
-        Math.abs(y + bh / 2 - h / 2) < 260) {
+    if (Math.abs(x + bw / 2 - w / 2) < 280 &&
+        Math.abs(y + bh / 2 - h / 2) < 280) {
       continue;
     }
 
-    obs.push({
-      x, y, w: bw, h: bh,
-      kind: rng() < .35 ? 'container' : (rng() < .5 ? 'pillar' : 'machine')
-    });
+    /* Vegetation nhỏ hơn và có thể xuyên qua một phần */
+    if (isVegetation) {
+      const vegType = rng() < 0.5 ? 'bush' : 'tree';
+      const vegRadius = vegType === 'tree' ? rnd(25, 40) : rnd(20, 30);
+      
+      obs.push({
+        x, y, w: bw, h: bh,
+        kind: vegType,
+        radius: vegRadius,
+        isVegetation: true,
+        blockMovement: vegType === 'tree',  /* Cây chặn di chuyển, bụi không */
+        blockVision: true                    /* Cả hai đều chặn tầm nhìn */
+      });
+    } else {
+      const kind = pick(obstaclePool);
+      obs.push({
+        x, y, w: bw, h: bh,
+        kind: kind,
+        isVegetation: false,
+        blockMovement: true,
+        blockVision: kind !== 'energy_field'
+      });
+    }
   }
+  
   return obs;
 }
 
@@ -206,11 +248,15 @@ export function pointInObstacle(W, x, y, r = 0) {
 /* =========================================================
    COLLIDE WITH OBSTACLES (đẩy entity ra khỏi vật cản)
    Dùng cho player + enemy.
+   Vegetation có thể không chặn di chuyển (bush) nhưng vẫn chặn tầm nhìn.
    ========================================================= */
 export function collideWithObstacles(W, ent) {
   const r = ent.radius;
   for (let i = 0; i < W.obstacles.length; i++) {
     const o = W.obstacles[i];
+    
+    /* Bỏ qua vegetation không chặn di chuyển */
+    if (o.isVegetation && !o.blockMovement) continue;
 
     const cx = clamp(ent.x, o.x, o.x + o.w);
     const cy = clamp(ent.y, o.y, o.y + o.h);

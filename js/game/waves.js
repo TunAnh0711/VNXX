@@ -337,3 +337,89 @@ export function completeWave(game, W) {
     }, 2400);
   }
 }
+
+/* =========================================================
+   COMPLETE WAVE - XỬ LÝ CHUYỂN STAGE SAU KHI ĐÁNH BOSS
+   Sau khi đánh bại boss (wave > stage.waves), chuyển sang stage tiếp theo
+   ========================================================= */
+export function completeWaveWithStageTransition(game, W) {
+  if (W.waveComplete) return;
+  W.waveComplete = true;
+  W.waveActive = false;
+
+  const d = DIFFICULTIES[game.profile.difficulty];
+  const stage = getStage(W.stage);
+  const lootMul = (W.waveDef.lootMul || 1) * d.loot;
+
+  /* ---------- Rewards ---------- */
+  const reward = Math.round((110 + W.wave * 22) * W.stage * lootMul);
+  const p = W.player;
+  p.credits += reward;
+
+  game.profile.statistics.creditsEarned += reward;
+  game.profile.statistics.wavesCleared++;
+  game.profile.statistics.highestWave = Math.max(
+    game.profile.statistics.highestWave,
+    W.wave
+  );
+
+  game.addXp(Math.round(28 + W.wave * 7));
+
+  if (typeof window.addToast === 'function') {
+    window.addToast('WAVE CLEARED  +' + reward.toLocaleString('en-US') + ' CR');
+  }
+  FloatText.add(W.texts, p.x, p.y - 50, 'WAVE CLEAR!', '#39ff9e', 20);
+  Sound.sfx('levelup');
+
+  /* ---------- Persist ---------- */
+  game.syncProfileFromWorld();
+  if (window.VNXX?.Save) window.VNXX.Save.auto(game.profile);
+  game.checkAchievements();
+
+  /* ---------- Kiểm tra có phải vừa đánh boss không ---------- */
+  const isBossWaveNow = W.wave > stage.waves;
+  
+  if (isBossWaveNow) {
+    /* Đã đánh bại boss → chuyển stage hoặc kết thúc game */
+    setTimeout(() => {
+      if (!game.world) return;
+      if (game.state === 'GAME_OVER' || game.state === 'HARDCORE_DEAD') return;
+      
+      /* Gọi onBossDefeated để hiển thị màn hình stage clear */
+      if (game.onBossDefeated) {
+        game.onBossDefeated();
+      }
+    }, 1500);
+    return;
+  }
+
+  /* Wave thường → tiếp tục wave sau */
+  const isLastRegularWave = W.wave >= stage.waves;
+  
+  if (isLastRegularWave) {
+    /* Đây là wave cuối trước boss → chuẩn bị boss wave */
+    setTimeout(() => {
+      if (!game.world) return;
+      if (game.state === 'GAME_OVER' || game.state === 'HARDCORE_DEAD') return;
+      startWave(game, W, W.wave + 1);
+    }, 2600);
+    return;
+  }
+
+  /* Cứ 3 wave mở shop */
+  if (W.wave % 3 === 0) {
+    setTimeout(() => {
+      if (!game.world) return;
+      if (game.state === 'GAME_OVER' || game.state === 'HARDCORE_DEAD') return;
+      game.openShop(function () {
+        startWave(game, W, W.wave + 1);
+      });
+    }, 1200);
+  } else {
+    setTimeout(() => {
+      if (!game.world) return;
+      if (game.state === 'GAME_OVER' || game.state === 'HARDCORE_DEAD') return;
+      startWave(game, W, W.wave + 1);
+    }, 2400);
+  }
+}

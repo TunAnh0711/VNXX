@@ -96,6 +96,69 @@ export const CONSUMABLES = {
     price: 3500,
     passive: true,               // KHÔNG dùng trực tiếp, chỉ tiêu thụ khi chết
     use: () => { /* no-op, xử lý trong Game.revive() */ }
+  },
+  
+  /* ===================== BUFF ĐẶC BIỆT (rương) ===================== */
+  shield_buff: {
+    id: 'shield_buff',
+    name: 'ENERGY SHIELD',
+    rarity: 'rare',
+    desc: '+100 giáp ảo trong 15s',
+    price: 0,
+    duration: 15,
+    use: (p) => {
+      p.buffs.shield = Math.max(p.buffs.shield, 15);
+      p.shield = 100;
+    }
+  },
+  
+  speed_boost: {
+    id: 'speed_boost',
+    name: 'HYPER SPEED',
+    rarity: 'rare',
+    desc: '+80% tốc chạy trong 12s',
+    price: 0,
+    duration: 12,
+    use: (p) => {
+      p.buffs.speedBoost = Math.max(p.buffs.speedBoost, 12);
+      p.speedBoostFactor = 1.8;
+    }
+  },
+  
+  triple_shot: {
+    id: 'triple_shot',
+    name: 'TRIPLE SHOT',
+    rarity: 'epic',
+    desc: 'Bắn x3 đạn trong 10s',
+    price: 0,
+    duration: 10,
+    use: (p) => {
+      p.buffs.tripleShot = Math.max(p.buffs.tripleShot, 10);
+    }
+  },
+  
+  rapid_fire: {
+    id: 'rapid_fire',
+    name: 'RAPID FIRE',
+    rarity: 'epic',
+    desc: '+100% tốc bắn trong 12s',
+    price: 0,
+    duration: 12,
+    use: (p) => {
+      p.buffs.rapidFire = Math.max(p.buffs.rapidFire, 12);
+    }
+  },
+  
+  invincibility: {
+    id: 'invincibility',
+    name: 'GOD MODE',
+    rarity: 'legendary',
+    desc: 'Bất tử trong 5s',
+    price: 0,
+    duration: 5,
+    use: (p) => {
+      p.buffs.invincible = Math.max(p.buffs.invincible, 5);
+    }
   }
 };
 
