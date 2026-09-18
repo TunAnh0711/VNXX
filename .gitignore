@@ -1,8 +1,42 @@
-﻿.DS_Store
-Thumbs.db
-*.log
-.env
-.env.*
+```
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
+dist/
+build/
+target/
+
+# Dependencies
 node_modules/
+venv/
+.venv/
+.env
+.env.local
+*.env.*
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Editors
 .vscode/
 .idea/
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
+
+# Package manager caches
+.npm/
+.yarn/
+.pnpm-store/
+```

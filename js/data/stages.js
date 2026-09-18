@@ -15,7 +15,7 @@ export const STAGES = [
     grid: '#0f1e2b',
     wall: '#1a3145',
     accent: '#28e0ff',
-    pool: ['drone', 'runner', 'swarm', 'shooter'],
+    pool: ['drone', 'runner', 'swarm', 'shooter', 'slow_thrower'],
     music: 'game',
     lore: 'CƠ SỞ BỎ HOANG. HỆ THỐNG VẪN CÒN THỨC.'
   },
@@ -30,7 +30,7 @@ export const STAGES = [
     grid: '#241a0c',
     wall: '#3d2b12',
     accent: '#ffa53a',
-    pool: ['drone', 'tank', 'shooter', 'exploder', 'runner'],
+    pool: ['drone', 'tank', 'shooter', 'exploder', 'runner', 'fire_spitter', 'kamikaze'],
     music: 'game',
     lore: 'KHU CÔNG NGHIỆP. LÒ PHẢN ỨNG CHƯA TẮT.'
   },
@@ -45,7 +45,7 @@ export const STAGES = [
     grid: '#1d1035',
     wall: '#331a5c',
     accent: '#ff2fd0',
-    pool: ['runner', 'assassin', 'shooter', 'swarm', 'shield'],
+    pool: ['runner', 'assassin', 'shooter', 'swarm', 'shield', 'ice_spitter', 'poison_bomber'],
     music: 'game',
     lore: 'THÀNH PHỐ NEON. TÍN HIỆU GIẢ ĐANG LAN TRUYỀN.'
   },
@@ -60,7 +60,7 @@ export const STAGES = [
     grid: '#1c1c1c',
     wall: '#2e2e2e',
     accent: '#ff3b52',
-    pool: ['tank', 'assassin', 'exploder', 'shield', 'shooter'],
+    pool: ['tank', 'assassin', 'exploder', 'shield', 'shooter', 'shadow_assassin', 'fire_spitter', 'poison_bomber'],
     music: 'game',
     lore: 'KHU VỰC CHẾT. KHÔNG CÓ SỰ SỐNG. CHỈ CÓ THỨ ĐANG CHỜ.'
   },
@@ -75,7 +75,7 @@ export const STAGES = [
     grid: '#150a2e',
     wall: '#2a1150',
     accent: '#a06bff',
-    pool: ['drone', 'runner', 'tank', 'shooter', 'swarm', 'assassin', 'shield', 'exploder'],
+    pool: ['drone', 'runner', 'tank', 'shooter', 'swarm', 'assassin', 'shield', 'exploder', 'slow_thrower', 'fire_spitter', 'ice_spitter', 'poison_bomber', 'shadow_assassin', 'kamikaze'],
     music: 'boss',
     lore: 'LÕI HƯ KHÔNG. ĐIỂM KẾT THÚC CỦA MỌI THỨ.'
   }

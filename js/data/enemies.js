@@ -151,6 +151,132 @@ export const ENEMIES = {
     attackCd: 1.2,
     knockRes: .5,
     shieldRegen: 6
+  },
+
+  /* ===================== QUÁI ĐẶC BIỆT (THEO YÊU CẦU) ===================== */
+  
+  /* Slow Thrower - Ném thuốc làm chậm */
+  slow_thrower: {
+    id: 'slow_thrower',
+    name: 'SLOW THROWER',
+    hp: 38,
+    speed: 55,
+    damage: 6,
+    radius: 16,
+    color: '#aaddff',
+    xp: 14,
+    credits: 13,
+    ai: 'slow_thrower',
+    attackRange: 280,
+    attackCd: 1.8,
+    preferred: 220,
+    projectileSpeed: 280,
+    slowDuration: 2.5,
+    slowFactor: 0.5,
+    knockRes: .1
+  },
+
+  /* Fire Spitter - Phun lửa gây DOT */
+  fire_spitter: {
+    id: 'fire_spitter',
+    name: 'FIRE SPITTER',
+    hp: 52,
+    speed: 60,
+    damage: 12,
+    radius: 17,
+    color: '#ffaa00',
+    xp: 18,
+    credits: 17,
+    ai: 'fire_spitter',
+    attackRange: 180,
+    attackCd: 1.4,
+    preferred: 150,
+    projectileSpeed: 320,
+    dotDamage: 3,
+    dotDuration: 2.0,
+    knockRes: .2
+  },
+
+  /* Ice Spitter - Phun băng làm chậm */
+  ice_spitter: {
+    id: 'ice_spitter',
+    name: 'ICE SPITTER',
+    hp: 46,
+    speed: 52,
+    damage: 9,
+    radius: 17,
+    color: '#00ffff',
+    xp: 16,
+    credits: 15,
+    ai: 'ice_spitter',
+    attackRange: 240,
+    attackCd: 1.6,
+    preferred: 200,
+    projectileSpeed: 300,
+    slowDuration: 2.0,
+    slowFactor: 0.45,
+    knockRes: .15
+  },
+
+  /* Poison Bomber - Ném độc tạo vùng */
+  poison_bomber: {
+    id: 'poison_bomber',
+    name: 'POISON BOMBER',
+    hp: 34,
+    speed: 48,
+    damage: 0,
+    radius: 18,
+    color: '#88ff00',
+    xp: 15,
+    credits: 14,
+    ai: 'poison_bomber',
+    attackRange: 300,
+    attackCd: 2.2,
+    preferred: 250,
+    projectileSpeed: 260,
+    poisonDamage: 2,
+    poisonDuration: 4.0,
+    poisonRadius: 70,
+    knockRes: .1
+  },
+
+  /* Shadow Assassin - Sát thủ lướt nhanh áp sát */
+  shadow_assassin: {
+    id: 'shadow_assassin',
+    name: 'SHADOW ASSASSIN',
+    hp: 42,
+    speed: 120,
+    damage: 22,
+    radius: 14,
+    color: '#8800ff',
+    xp: 20,
+    credits: 19,
+    ai: 'shadow_assassin',
+    attackRange: 36,
+    attackCd: 0.9,
+    dashCd: 2.0,
+    dashSpeed: 720,
+    dashRange: 380,
+    knockRes: .35
+  },
+
+  /* Kamikaze - Quái cảm tử nổ khi chạm */
+  kamikaze: {
+    id: 'kamikaze',
+    name: 'KAMIKAZE',
+    hp: 18,
+    speed: 165,
+    damage: 45,
+    radius: 14,
+    color: '#ff00ff',
+    xp: 10,
+    credits: 8,
+    ai: 'kamikaze',
+    attackRange: 48,
+    attackCd: 1,
+    knockRes: .1,
+    fuse: 0.8,
+    blastRadius: 90
   }
 };
 

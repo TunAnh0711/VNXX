@@ -131,7 +131,12 @@ function handleEnemyProjectile(game, W, pr, i) {
   const rr = pr.r + p.radius;
   if (dist2(pr, p) >= rr * rr) return false;
 
-  damagePlayer(game, W, pr.damage, null);
+  /* Xử lý các loại đạn đặc biệt */
+  if (pr.specialType) {
+    applySpecialEffect(game, W, pr);
+  } else {
+    damagePlayer(game, W, pr.damage, null);
+  }
 
   if (pr.splash > 0) {
     /* Splash của đạn quái chỉ gây damage player, không damage quái */
@@ -140,6 +145,60 @@ function handleEnemyProjectile(game, W, pr, i) {
 
   removeAt(W.projectiles, i);
   return true;
+}
+
+/* =========================================================
+   APPLY SPECIAL EFFECT (slow, fire, ice, poison)
+   ========================================================= */
+function applySpecialEffect(game, W, pr) {
+  const p = W.player;
+  
+  /* Slow effect */
+  if (pr.slowDuration && pr.slowFactor) {
+    p.buffs.slow = Math.max(p.buffs.slow || 0, pr.slowDuration);
+    p.slowFactor = Math.min(p.slowFactor || 1, pr.slowFactor);
+    FloatText.add(W.texts, p.x, p.y - 40, 'SLOWED!', '#aaddff', 15);
+  }
+  
+  /* Fire DOT */
+  if (pr.dotDamage && pr.dotDuration) {
+    p.buffs.burn = Math.max(p.buffs.burn || 0, pr.dotDuration);
+    p.burnDamage = Math.max(p.burnDamage || 0, pr.dotDamage);
+    FloatText.add(W.texts, p.x, p.y - 40, 'BURNING!', '#ffaa00', 15);
+  }
+  
+  /* Ice slow */
+  if (pr.slowDuration && pr.type === 'ice') {
+    p.buffs.frozen = Math.max(p.buffs.frozen || 0, pr.slowDuration * 0.3);
+    FloatText.add(W.texts, p.x, p.y - 40, 'FROZEN!', '#00ffff', 15);
+  }
+  
+  /* Poison DOT */
+  if (pr.poisonDamage && pr.poisonDuration) {
+    p.buffs.poisoned = Math.max(p.buffs.poisoned || 0, pr.poisonDuration);
+    p.poisonDamage = Math.max(p.poisonDamage || 0, pr.poisonDamage);
+    FloatText.add(W.texts, p.x, p.y - 40, 'POISONED!', '#88ff00', 15);
+    
+    /* Tạo vùng độc nếu là poison bomber */
+    if (pr.splash > 0) {
+      W.areaEffects = W.areaEffects || [];
+      W.areaEffects.push({
+        x: pr.x,
+        y: pr.y,
+        radius: pr.splash,
+        type: 'poison',
+        damage: pr.poisonDamage,
+        duration: pr.poisonDuration * 2,
+        maxDuration: pr.poisonDuration * 2,
+        color: '#88ff00'
+      });
+    }
+  }
+  
+  /* Gây damage cơ bản */
+  if (pr.damage > 0) {
+    damagePlayer(game, W, pr.damage, null);
+  }
 }
 
 /* =========================================================
