@@ -266,7 +266,7 @@ export function updateWave(game, W, dt) {
     done = true;
   }
 
-  if (done) completeWave(game, W);
+  if (done) completeWaveWithStageTransition(game, W);
 }
 
 /* =========================================================
