@@ -346,6 +346,9 @@ export function nextStage(game) {
   syncProfileFromWorld(game);
   Save.write(pr);
 
+  /* Reset world flag để đảm bảo startRun tạo world mới */
+  game.world = null;
+  
   game.startRun(pr, false);
 }
 

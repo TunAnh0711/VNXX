@@ -585,6 +585,9 @@ const Game = {
     this.playTimer = 0;
     this.pendingLevelUps = 0;
     this._eventWave = 0;
+    
+    /* Reset world trước khi tạo mới */
+    this.world = null;
 
     this.setState(ST.LOADING);
     showScreen(ST.LOADING);

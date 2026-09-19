@@ -423,3 +423,8 @@ export function completeWaveWithStageTransition(game, W) {
     }, 2400);
   }
 }
+
+/* Export completeWave alias cho backward compatibility */
+export function completeWave(game, W) {
+  completeWaveWithStageTransition(game, W);
+}
