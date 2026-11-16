@@ -359,26 +359,34 @@ body.mobile-mode .toast-item {
     letter-spacing: 1px;
   }
 
-  /* Menu chính gọn */
-  body.mobile-mode .menu-buttons {
-    max-width: 280px;
+  /* Menu chính gọn (reactor command deck) */
+  body.mobile-mode .menu-dock {
     gap: 10px;
+    padding: 0 14px 18px;
   }
 
-  body.mobile-mode .menu-buttons button {
-    padding: 12px 16px;
+  body.mobile-mode .dock-btn {
+    padding: 10px 12px;
     font-size: 12px;
-    letter-spacing: 3px;
+    letter-spacing: 2px;
   }
 
-  body.mobile-mode .logo {
-    font-size: clamp(48px, 14vw, 90px);
+  body.mobile-mode .dock-btn.primary {
+    padding: 12px 14px;
   }
 
-  body.mobile-mode .tagline {
+  body.mobile-mode .hero-logo {
+    font-size: clamp(40px, 12vw, 80px);
+  }
+
+  body.mobile-mode .hero-tag {
     font-size: 10px;
-    letter-spacing: 6px;
-    margin: 10px 0 28px;
+    letter-spacing: 4px;
+    margin: 8px 0 18px;
+  }
+
+  body.mobile-mode .menu-intel {
+    display: none;
   }
 }
 
@@ -461,5 +469,57 @@ body.mobile-mode .toast-item {
   body.mobile-mode #mobileButtons {
     bottom: max(16px, env(safe-area-inset-bottom));
     right: max(16px, env(safe-area-inset-right));
+  }
+}
+/* =========================================================
+   COMBAT HUD (COMBO / OVERDRIVE) — MOBILE
+   Giữ 2 khối này không đè lên HUD góc phải và nút touch.
+   ========================================================= */
+body.mobile-mode #comboWrap {
+  top: 104px;
+  right: 8px;
+  width: 112px;
+}
+
+body.mobile-mode #comboCount {
+  font-size: 26px;
+}
+
+body.mobile-mode .combo-mult {
+  font-size: 10px;
+}
+
+body.mobile-mode #odWrap {
+  width: min(64vw, 260px);
+  bottom: 54px;
+}
+
+body.mobile-mode .od-name {
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+body.mobile-mode .od-key {
+  display: none;
+}
+
+/* Màn hình rất hẹp (<= 400px) — thu HUD góc trên */
+@media (max-width: 400px) {
+  body.mobile-mode .hud-tl {
+    width: min(190px, 42vw);
+  }
+
+  body.mobile-mode #waveText {
+    font-size: 9.5px;
+    letter-spacing: .8px;
+  }
+
+  body.mobile-mode #objectiveText {
+    font-size: 8.5px;
+    letter-spacing: .4px;
+  }
+
+  body.mobile-mode #odWrap {
+    bottom: 46px;
   }
 }

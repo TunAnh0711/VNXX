@@ -111,3 +111,77 @@ export function fmtDate(ts) {
   const p = (n) => String(n).padStart(2, '0');
   return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear();
 }
+
+/* =========================================================
+   PATH HELPERS — dùng cho draw-entities
+   ========================================================= */
+
+/**
+ * Vẽ polygon đều N cạnh (đường vẽ chưa fill/stroke).
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x        tâm X
+ * @param {number} y        tâm Y
+ * @param {number} r        bán kính
+ * @param {number} sides    số cạnh
+ * @param {number} rot      góc xoay (radian)
+ */
+export function polyPath(ctx, x, y, r, sides, rot) {
+  ctx.beginPath();
+  for (let i = 0; i < sides; i++) {
+    const a = rot + (i / sides) * TAU;
+    const px = x + Math.cos(a) * r;
+    const py = y + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+/**
+ * Vẽ hình sao gai — N cánh, đỉnh ngoài/trong xen kẽ.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x        tâm X
+ * @param {number} y        tâm Y
+ * @param {number} rOuter   bán kính đỉnh ngoài
+ * @param {number} rInner   bán kính đỉnh trong
+ * @param {number} points   số cánh
+ * @param {number} rot      góc xoay (radian)
+ */
+export function starPath(ctx, x, y, rOuter, rInner, points, rot) {
+  ctx.beginPath();
+  const total = points * 2;
+  for (let i = 0; i < total; i++) {
+    const a = rot + (i / total) * TAU;
+    const r = (i % 2 === 0) ? rOuter : rInner;
+    const px = x + Math.cos(a) * r;
+    const py = y + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+/**
+ * Vẽ nhiều cung tròn đứt quãng tạo cảm giác năng lượng xoay.
+ * LƯU Ý: hàm này tự gọi stroke() nên cần set màu/lineWidth bên ngoài
+ * nếu muốn override. Tham số `color` set cứng strokeStyle.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x        tâm X
+ * @param {number} y        tâm Y
+ * @param {number} r        bán kính
+ * @param {number} t        offset góc (radian)
+ * @param {string} color    màu stroke
+ * @param {number} segments số cung (mặc định 8)
+ */
+export function energyRing(ctx, x, y, r, t, color, segments = 8) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  for (let i = 0; i < segments; i++) {
+    const a0 = (i / segments) * TAU + t;
+    const a1 = a0 + (TAU / segments) * 0.55;
+    ctx.beginPath();
+    ctx.arc(x, y, r, a0, a1);
+    ctx.stroke();
+  }
+}

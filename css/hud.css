@@ -311,3 +311,79 @@
   text-shadow: 0 0 2px rgba(57, 255, 158, 0.5);
 }
 #debugPanel.on { display: block; }
+/* =========================================================
+   AMMO DISPLAY
+   ========================================================= */
+.ammo-display {
+  margin-top: 8px;
+  display: inline-block;
+  padding: 4px 10px;
+  background: rgba(4, 8, 14, .82);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  min-width: 80px;
+  text-align: center;
+  transition: all .15s;
+}
+
+.ammo-display.hidden {
+  display: none;
+}
+
+.ammo-display.empty {
+  border-color: var(--red);
+  box-shadow: 0 0 12px rgba(255, 59, 82, .5);
+  animation: ammo-empty-pulse .6s infinite;
+}
+
+@keyframes ammo-empty-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .5; }
+}
+
+.ammo-line {
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: var(--cyan);
+  font-weight: bold;
+}
+
+.ammo-cur {
+  color: #fff;
+  font-size: 16px;
+}
+
+.ammo-sep {
+  color: var(--muted);
+  margin: 0 3px;
+}
+
+.ammo-max {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ammo-display.empty .ammo-cur {
+  color: var(--red);
+}
+
+/* Reload bar */
+.reload-bar {
+  margin-top: 4px;
+  height: 3px;
+  background: rgba(0, 0, 0, .6);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.reload-bar.hidden {
+  display: none;
+}
+
+.reload-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--cyan2), var(--cyan));
+  box-shadow: 0 0 8px var(--cyan);
+  transition: width .05s linear;
+}

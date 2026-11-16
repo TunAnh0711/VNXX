@@ -6,6 +6,7 @@
 
 import { CFG, DIFFICULTIES } from '../core/constants.js';
 import { DEFAULT_WEAPONS } from '../data/weapons.js';
+import { DEFAULT_SKIN } from '../data/skins.js';
 
 /* =========================================================
    SAVE MODULE
@@ -134,6 +135,9 @@ const Save = {
     merged.unlockedItems    = Array.isArray(d.unlockedItems)    ? d.unlockedItems.slice()    : [];
     merged.achievements     = Array.isArray(d.achievements)     ? d.achievements.slice()     : [];
 
+    /* Trang phục: save cũ không có field này → về mặc định */
+    merged.skin = (typeof d.skin === 'string' && d.skin) ? d.skin : def.skin;
+
     merged.saveVersion = CFG.SAVE_VERSION;
     return merged;
   },
@@ -164,6 +168,7 @@ const Save = {
 
       /* ---------- WEAPON / INVENTORY ---------- */
       weapon: 'pistol',
+      skin: DEFAULT_SKIN,
       inventory: {
         weapons: DEFAULT_WEAPONS.slice(),
         modules: {},
@@ -184,8 +189,48 @@ const Save = {
         attackSpeedMul: 0,
         luck: 0,
         rangeMul: 0,
-        dodge: 0
+        dodge: 0,
+        /* 12 stats mới */
+        reloadSpeedMul: 0,
+        magazineMul: 0,
+        shieldMaxMul: 0,
+        pierceAdd: 0,
+        splashMul: 0,
+        spreadMul: 0,
+        projSpeedMul: 0,
+        armorPen: 0,
+        elementDamageMul: 0,
+        dashCdMul: 0,
+        dashDistanceMul: 0,
+        regen: 0,
+        /* combat v2 */
+        statusPowerMul: 0,
+        statusDurMul: 0,
+        poiseMul: 0,
+        executeMul: 0,
+        comboDmgMul: 0,
+        comboWindowMul: 0,
+        odGainMul: 0,
+        odDurAdd: 0,
+        chainAdd: 0,
+        breakDmgMul: 0,
+        killHeal: 0,
+        extraStatus: []
       },
+
+      /* ---------- Shield / Heal state ---------- */
+      shield: 0,
+      shieldMax: 0,
+      noHeal: false,
+      healMul: 1,
+      shieldRegenEnabled: false,
+
+      /* ---------- Magazine ---------- */
+      baseMagazine: 0,
+      magAmmo: 0,
+
+      /* ---------- Picked upgrades (cho replay flag) ---------- */
+      pickedUpgradeIds: [],
 
       /* ---------- STAGE / WAVE ---------- */
       currentStage: 1,

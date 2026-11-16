@@ -1,0 +1,275 @@
+/* =========================================================
+   HALF NIFE — POLISH
+   Lớp phủ cuối: làm mượt chuyển động, nâng cấp nút/panel/HUD.
+   Load SAU tất cả css khác để override có kiểm soát.
+   ========================================================= */
+
+:root {
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --glass: rgba(10, 16, 25, .72);
+  --glass-hi: rgba(20, 32, 48, .82);
+}
+
+/* =========================================================
+   NÚT — nhấc nhẹ, viền sáng, phản hồi rõ
+   ========================================================= */
+.btn {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  transition:
+    transform .18s var(--ease-out),
+    border-color .18s ease,
+    box-shadow .22s ease,
+    background-color .18s ease,
+    color .18s ease;
+  will-change: transform;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(40, 224, 255, .16) 42%,
+    rgba(40, 224, 255, .04) 58%,
+    transparent 100%
+  );
+  transform: translateX(-120%);
+  transition: transform .5s var(--ease-out);
+}
+
+.btn:hover::after {
+  transform: translateX(120%);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 6px 22px rgba(0, 0, 0, .5),
+    0 0 0 1px rgba(40, 224, 255, .35) inset;
+}
+
+.btn:active {
+  transform: translateY(0) scale(.985);
+  transition-duration: .06s;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--cyan);
+}
+
+.btn.primary {
+  background: linear-gradient(180deg, rgba(40, 224, 255, .18), rgba(40, 224, 255, .05));
+  border-color: rgba(40, 224, 255, .65);
+}
+
+.btn.primary:hover {
+  box-shadow:
+    0 8px 28px rgba(40, 224, 255, .22),
+    0 0 0 1px rgba(40, 224, 255, .55) inset;
+}
+
+.btn.danger:hover {
+  box-shadow:
+    0 8px 26px rgba(255, 59, 82, .25),
+    0 0 0 1px rgba(255, 59, 82, .5) inset;
+}
+
+.btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* =========================================================
+   PANEL — kính mờ + viền sáng nhẹ
+   ========================================================= */
+.panel {
+  /* Nền đủ đục để chữ luôn đọc được, không phụ thuộc backdrop-filter
+     (backdrop-filter lồng nhau rất tốn GPU và tối đi trên máy yếu). */
+  background:
+    linear-gradient(180deg, rgba(16, 26, 40, .96), rgba(6, 10, 17, .985));
+  border: 1px solid rgba(40, 224, 255, .20);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, .62),
+    0 0 0 1px rgba(255, 255, 255, .03) inset,
+    0 0 70px rgba(40, 224, 255, .07) inset;
+  border-radius: 12px;
+  animation: panel-in .28s var(--ease-out);
+}
+
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(14px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* =========================================================
+   TIÊU ĐỀ PANEL — sáng rõ, có quầng
+   ========================================================= */
+.panel h2 {
+  color: #eaf7ff;
+  letter-spacing: 4px;
+  text-shadow: 0 0 18px rgba(40, 224, 255, .38);
+}
+
+.panel h3 {
+  color: #bcd8e8;
+}
+
+.panel label {
+  color: #9db9cc;
+}
+
+/* =========================================================
+   HUD — thanh máu/XP mượt hơn
+   ========================================================= */
+.bar .fill,
+#comboFill,
+#odFill,
+#bossFill,
+.reload-fill {
+  transition: width .16s var(--ease-out);
+}
+
+.bar.hp .fill {
+  background: linear-gradient(90deg, #ff3b52, #ff7a8a 55%, #ffb3bc);
+  box-shadow: 0 0 14px rgba(255, 59, 82, .55);
+}
+
+.bar.xp .fill {
+  background: linear-gradient(90deg, var(--cyan2), var(--cyan));
+  box-shadow: 0 0 12px var(--cyan-glow);
+}
+
+#bossFill {
+  background: linear-gradient(90deg, #ff3b52, #ff8a3d 60%, #ffc44d);
+  box-shadow: 0 0 16px rgba(255, 90, 70, .6);
+}
+
+/* Nhịp thở khi máu thấp */
+.bar.hp.low .fill {
+  animation: hp-throb 1.1s ease-in-out infinite;
+}
+
+@keyframes hp-throb {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.45); }
+}
+
+/* =========================================================
+   MENU — nút tủ đồ nổi bật (reactor command deck)
+   ========================================================= */
+#menuWardrobeBtn {
+  border-color: rgba(255, 196, 77, .45);
+  color: #ffe1a3;
+}
+
+#menuWardrobeBtn:hover {
+  border-color: var(--amber);
+  box-shadow:
+    0 8px 26px rgba(255, 196, 77, .2),
+    0 0 0 1px rgba(255, 196, 77, .45) inset;
+}
+
+/* =========================================================
+   TOAST — trượt mượt
+   ========================================================= */
+#toast > * {
+  animation: toast-in .26s var(--ease-out);
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(40, 224, 255, .18);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(40, 224, 255, .34);
+}
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+input[type="text"],
+input[type="number"],
+textarea {
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(40, 224, 255, .16);
+}
+
+input[type="range"] {
+  accent-color: var(--cyan);
+}
+
+/* =========================================================
+   TÔN TRỌNG NGƯỜI DÙNG MUỐN ÍT CHUYỂN ĐỘNG
+   ========================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+
+  .btn:hover { transform: none; }
+  .hero-logo .hl-half, .hero-logo .hl-nife,
+  .hero-logo .hl-half::before, .hero-logo .hl-half::after,
+  .hero-logo .hl-nife::before, .hero-logo .hl-nife::after,
+  .hero-logo .hl-slash i, .logo-scan::before {
+    animation: none !important;
+  }
+}
+
+/* =========================================================
+   MÀN HÌNH NHỎ
+   ========================================================= */
+@media (max-width: 560px) {
+  .panel {
+    border-radius: 10px;
+    max-width: 96vw;
+  }
+
+  .dock-btn {
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  .dock-btn .db-copy small {
+    display: none;
+  }
+}

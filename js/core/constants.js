@@ -25,7 +25,8 @@ export const ST = {
   WATCH_MODE:      'WATCH_MODE',
   STAGE_CLEAR:     'STAGE_CLEAR',
   EVENT:           'EVENT',
-  LAN:             'LAN'
+  LAN:             'LAN',
+  WARDROBE:        'WARDROBE'
 };
 
 /** Map state -> DOM screen id (dùng cho showScreen). */
@@ -45,12 +46,16 @@ export const SCREEN_MAP = {
   EVENT:            'screen-event',
   LOADING:          'screen-loading',
   INTRO:            'screen-intro',
-  LAN:              'screen-lan'
+  LAN:              'screen-lan',
+  WARDROBE:         'screen-wardrobe'
 };
 
 /* ===================== CONFIG ===================== */
 export const CFG = {
-  SAVE_VERSION:   1,
+  GAME_NAME:      'HALF NIFE',
+  GAME_VERSION:   '2.0.0',
+  BUILD:          '002',
+  SAVE_VERSION:   2,
   SAVE_PREFIX:    'VNXX_SAVE_',
   SETTINGS_KEY:   'VNXX_SETTINGS',
   META_KEY:       'VNXX_META',
@@ -75,7 +80,46 @@ export const CFG = {
   XP_BASE:        20,
   XP_GROWTH:      1.24,
   MAX_PARTICLES:  340,
-  MAX_ENEMIES:    90
+  MAX_ENEMIES:    110,
+
+  /* ===================== COMBO / MOMENTUM =====================
+     Chuỗi hạ gục liên tiếp. Mỗi stack +1% sát thương, tối đa 100 stack.
+     Nhận sát thương → mất một nửa stack. Hết 3.2s không hạ gục → reset.
+     ========================================================= */
+  COMBO: {
+    window:      3.2,     // giây để giữ chuỗi
+    perStack:    .012,    // +1.2% sát thương / stack
+    maxStacks:   100,
+    creditPer:   .006,    // +0.6% credits / stack
+    xpPer:       .004,
+    breakOnHit:  .5       // mất 50% stack khi bị đánh
+  },
+
+  /* ===================== OVERDRIVE (ULTIMATE) =====================
+     Nạp từ sát thương gây ra, hạ gục, và né hoàn hảo.
+     Đầy 100 → nhấn F để kích hoạt 7s.
+     ========================================================= */
+  OVERDRIVE: {
+    max:          100,
+    duration:     7,
+    dmgGain:      .035,   // % nạp / 1 sát thương gây ra
+    killGain:     1.4,    // % nạp / 1 mạng
+    perfectDash:  8,      // % nạp khi né bằng dash
+    dmgMul:       1.35,   // +35% sát thương khi bật
+    fireRateMul:  1.45,   // +45% tốc bắn
+    speedMul:     1.12,
+    freeAmmo:     true,   // không tốn đạn
+    statusMul:    1.8     // status mạnh hơn khi bật
+  },
+
+  /* ===================== ARMOR BREAK =====================
+     Elite/boss/tank có "poise". Đánh đủ → vỡ giáp, choáng + nhận thêm ST.
+     ========================================================= */
+  BREAK: {
+    duration:     3.5,
+    dmgBonus:     .60,
+    staggerMul:   0
+  }
 };
 
 /* ===================== DIFFICULTY ===================== */

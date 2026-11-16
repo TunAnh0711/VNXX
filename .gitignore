@@ -6,3 +6,7 @@ Thumbs.db
 node_modules/
 .vscode/
 .idea/
+css2/
+temp/
+_shot_*.html
+_t.html

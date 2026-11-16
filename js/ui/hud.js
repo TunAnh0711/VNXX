@@ -1,20 +1,17 @@
 /* =========================================================
    VNXX — UI / HUD
-   Cập nhật HUD (HP/XP/Shield/Credits/Wave/BossBar),
+   Cập nhật HUD (HP/XP/Shield/Credits/Wave/BossBar/Ammo),
    toast notifications, interact prompt.
    Pure DOM, không import Game.
    ========================================================= */
 
 import { STAGES } from '../data/stages.js';
+import { CFG } from '../core/constants.js';
 import { clamp, fmtNum } from '../core/utils.js';
+import { WEAPONS, hasMagazine } from '../data/weapons.js';
 
 /* =========================================================
    UPDATE HUD (mỗi frame)
-   - HP bar + text
-   - XP bar + level text
-   - Shield bar (ẩn khi shield = 0)
-   - Credits / Shards
-   - Wave + objective text
    ========================================================= */
 export function updateHUD(game, W) {
   if (!W || !W.player) return;
@@ -69,6 +66,15 @@ export function updateHUD(game, W) {
     }
   }
 
+  /* ---------- Enemy Counter ---------- */
+  const ecEl = document.getElementById('enemyCounter');
+  const ecNum = document.getElementById('enemyCountNum');
+  if (ecEl && ecNum) {
+    const alive = (W.enemies || []).filter((e) => e && e.alive && !e.isBoss).length;
+    ecNum.textContent = alive;
+    ecEl.classList.toggle('on', alive > 0 && game && game.state === 'PLAYING');
+  }
+
   /* ---------- Shield bar ---------- */
   const sb = document.getElementById('shieldBar');
   const sf = document.getElementById('shieldFill');
@@ -85,12 +91,134 @@ export function updateHUD(game, W) {
       sb.classList.add('hidden');
     }
   }
+
+  /* ---------- AMMO ---------- */
+  updateAmmoDisplay(p);
+
+  /* ---------- Combo / Overdrive ---------- */
+  updateComboUI(W);
+  updateOverdriveUI(W);
+}
+
+/* =========================================================
+   COMBO UI
+   ========================================================= */
+function updateComboUI(W) {
+  const wrap = document.getElementById('comboWrap');
+  if (!wrap) return;
+
+  const c = W.combo;
+  if (!c || c.count <= 0) {
+    wrap.classList.add('hidden');
+    return;
+  }
+
+  wrap.classList.remove('hidden');
+  wrap.dataset.tier = String(c.tier);
+
+  const cnt = document.getElementById('comboCount');
+  if (cnt) cnt.textContent = c.count;
+
+  const fill = document.getElementById('comboFill');
+  if (fill) {
+    const win = CFG.COMBO.window *
+      (1 + ((W.player && W.player.up && W.player.up.comboWindowMul) || 0));
+    const ratio = Math.max(0, Math.min(1, c.timer / (win || 1)));
+    fill.style.width = ratio * 100 + '%';
+  }
+
+  const mult = document.getElementById('comboMult');
+  if (mult) {
+    const bonus = Math.round((c.mult - 1) * 100);
+    mult.textContent = '+' + bonus + '%';
+  }
+
+  if (c.pop > 0) {
+    wrap.style.transform = 'scale(' + (1 + c.pop * .12) + ')';
+  } else {
+    wrap.style.transform = 'scale(1)';
+  }
+}
+
+/* =========================================================
+   OVERDRIVE UI
+   ========================================================= */
+function updateOverdriveUI(W) {
+  const wrap = document.getElementById('odWrap');
+  if (!wrap) return;
+
+  const od = W.overdrive;
+  if (!od) { wrap.classList.add('hidden'); return; }
+
+  wrap.classList.remove('hidden');
+
+  const fill = document.getElementById('odFill');
+  const activeEl = document.getElementById('odActive');
+
+  const isActive = od.active > 0;
+
+  if (fill) {
+    const durMax = od.activeMax || CFG.OVERDRIVE.duration;
+    const ratio = isActive
+      ? Math.min(1, od.active / durMax)
+      : Math.min(1, od.charge / od.max);
+    fill.style.width = ratio * 100 + '%';
+  }
+
+  wrap.classList.toggle('ready', !!od.ready && !isActive);
+  wrap.classList.toggle('active', isActive);
+
+  if (activeEl) {
+    activeEl.classList.toggle('hidden', !isActive);
+    if (isActive) activeEl.textContent = Math.ceil(od.active) + 's';
+  }
+}
+
+/* =========================================================
+   AMMO DISPLAY — hiển thị số đạn + thanh reload
+   ========================================================= */
+export function updateAmmoDisplay(p) {
+  const display = document.getElementById('ammoDisplay');
+  if (!display) return;
+
+  const w = WEAPONS[p.weaponId];
+  if (!w) {
+    display.classList.add('hidden');
+    return;
+  }
+
+  /* Ẩn với melee và weapon không có magazine (railgun) */
+  if (!hasMagazine(p.weaponId)) {
+    display.classList.add('hidden');
+    return;
+  }
+
+  display.classList.remove('hidden');
+
+  const curEl = document.getElementById('ammoCur');
+  const maxEl = document.getElementById('ammoMax');
+  const reloadBar = document.getElementById('reloadBar');
+  const reloadFill = document.getElementById('reloadFill');
+
+  if (curEl) curEl.textContent = p.magAmmo;
+  if (maxEl) maxEl.textContent = p.magMax;
+
+  /* Đổi màu đỏ khi hết đạn */
+  display.classList.toggle('empty', p.magAmmo <= 0);
+
+  /* Reload bar */
+  if (p.reloading && reloadBar && reloadFill) {
+    reloadBar.classList.remove('hidden');
+    const prog = 1 - (p.reloadTimer / p.reloadDuration);
+    reloadFill.style.width = Math.max(0, Math.min(100, prog * 100)) + '%';
+  } else if (reloadBar) {
+    reloadBar.classList.add('hidden');
+    if (reloadFill) reloadFill.style.width = '0%';
+  }
 }
 
 /* =========================================================
    TOAST NOTIFICATIONS
-   Thêm 1 dòng thông báo ở top-center, tự xóa sau 1.9s.
-   Tối đa 5 toast cùng lúc.
    ========================================================= */
 export function addToast(msg) {
   const el = document.getElementById('toast');
@@ -101,22 +229,19 @@ export function addToast(msg) {
   d.textContent = msg;
   el.appendChild(d);
 
-  /* Fade out → remove sau 1.9s */
   setTimeout(() => {
     d.style.transition = 'opacity .4s';
     d.style.opacity = '0';
     setTimeout(() => d.remove(), 420);
   }, 1900);
 
-  /* Giới hạn 5 toast */
   while (el.children.length > 5) {
     el.removeChild(el.firstChild);
   }
 }
 
 /* =========================================================
-   INTERACT PROMPT (bottom-center)
-   Hiện khi player đứng gần rương chưa mở.
+   INTERACT PROMPT
    ========================================================= */
 export function showInteractPrompt(text) {
   const el = document.getElementById('interactPrompt');
@@ -132,7 +257,7 @@ export function hideInteractPrompt() {
 }
 
 /* =========================================================
-   BOSS BAR (top-center)
+   BOSS BAR
    ========================================================= */
 export function showBossBar(name) {
   const nameEl = document.getElementById('bossName');
@@ -154,8 +279,7 @@ export function updateBossBar(hp, maxHp) {
 }
 
 /* =========================================================
-   SAVE INDICATOR (góc phải)
-   Hiện "✓ SAVED" trong 1.4s khi autosave thành công.
+   SAVE INDICATOR
    ========================================================= */
 let _saveTimer = null;
 
@@ -168,10 +292,11 @@ export function showSaveIndicator() {
 }
 
 /* =========================================================
-   EXPORT DEFAULT — cho tiện import
+   EXPORT DEFAULT
    ========================================================= */
 export default {
   updateHUD,
+  updateAmmoDisplay,
   addToast,
   showInteractPrompt,
   hideInteractPrompt,

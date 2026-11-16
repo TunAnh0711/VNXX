@@ -5,38 +5,7 @@
    ========================================================= */
 
 import Settings from '../core/settings.js';
-
-/* =========================================================
-   PATTERN NHẠC NỀN
-   Mỗi pattern: bpm, bass (8 step), lead (8 step), sóng.
-   null = nghỉ. Số = bán cung so với gốc.
-   ========================================================= */
-const MUSIC_PATTERNS = {
-  menu: {
-    bpm: 84,
-    bass: [0, null, -5, null, 3, null, -2, null],
-    lead: [12, 15, 12, 10, 12, 7, 5, 7],
-    wave: 'triangle'
-  },
-  game: {
-    bpm: 118,
-    bass: [0, 0, 3, null, 5, 5, -2, null],
-    lead: [12, 10, 7, 10, 12, 15, 14, 12],
-    wave: 'triangle'
-  },
-  boss: {
-    bpm: 146,
-    bass: [0, 0, 0, -1, 0, 0, -3, -1],
-    lead: [12, 13, 12, 10, 12, 15, 17, 15],
-    wave: 'sawtooth'
-  },
-  over: {
-    bpm: 66,
-    bass: [0, null, -2, null, -4, null, -5, null],
-    lead: [],
-    wave: 'sine'
-  }
-};
+import Music from './music.js';
 
 /* =========================================================
    SOUND MODULE
@@ -70,7 +39,20 @@ const Sound = {
       /* Bus trung tâm */
       this.master = this.ctx.createGain();
       this.master.gain.value = (Settings.get('masterVol') / 100) * .9;
-      this.master.connect(this.ctx.destination);
+
+      /* Limiter: chặn vỡ tiếng khi hàng chục SFX cùng lúc */
+      try {
+        this.comp = this.ctx.createDynamicsCompressor();
+        this.comp.threshold.value = -11;
+        this.comp.knee.value = 22;
+        this.comp.ratio.value = 7;
+        this.comp.attack.value = .003;
+        this.comp.release.value = .20;
+        this.master.connect(this.comp);
+        this.comp.connect(this.ctx.destination);
+      } catch (e) {
+        this.master.connect(this.ctx.destination);
+      }
 
       /* Bus nhạc */
       this.musicGain = this.ctx.createGain();
@@ -81,6 +63,9 @@ const Sound = {
       this.sfxGain = this.ctx.createGain();
       this.sfxGain.gain.value = (Settings.get('sfxVol') / 100) * .7;
       this.sfxGain.connect(this.master);
+
+      /* Engine nhạc sinh bằng công thức toán */
+      Music.init(this.ctx, this.musicGain);
 
       this.ready = true;
     } catch (err) {
@@ -159,6 +144,11 @@ const Sound = {
     src.start(t);
   },
 
+  /** Tần số ngẫu nhiên hoá nhẹ — tránh tiếng súng bị đơn điệu. */
+  _v(base, spread = .06) {
+    return base * (1 - spread + Math.random() * spread * 2);
+  },
+
   /* =========================================================
      SFX DISPATCH
      ========================================================= */
@@ -170,7 +160,7 @@ const Sound = {
         this.tone(720, .07, 'square', .08, 0, 320);
         break;
       case 'shoot':
-        this.tone(880, .05, 'square', .07, 0, 300);
+        this.tone(this._v(880), .05, 'square', .07, 0, this._v(300, .12));
         break;
       case 'shotgun':
         this.noise(.14, .16, 2400);
@@ -182,7 +172,7 @@ const Sound = {
         break;
       case 'hit':
         this.noise(.06, .11, 2600);
-        this.tone(340, .05, 'square', .07);
+        this.tone(this._v(340, .09), .05, 'square', .07);
         break;
       case 'crit':
         this.tone(1300, .1, 'square', .13, 0, 600);
@@ -210,6 +200,33 @@ const Sound = {
         break;
       case 'button':
         this.tone(560, .045, 'square', .06);
+        break;
+      case 'click':
+        this.tone(760, .028, 'triangle', .05, 0, 980);
+        break;
+      case 'error':
+        this.tone(180, .18, 'square', .10, 0, 120);
+        this.tone(140, .18, 'square', .08, .09, 95);
+        break;
+      case 'equip':
+        this.tone(520, .07, 'triangle', .08, 0, 700);
+        this.tone(880, .1, 'sine', .07, .06, 1100);
+        break;
+      case 'ricochet':
+        this.tone(1500, .05, 'triangle', .07, 0, 700);
+        this.tone(2100, .04, 'sine', .05, .02, 1200);
+        break;
+      case 'freeze':
+        this.noise(.18, .09, 5200);
+        this.tone(1400, .16, 'sine', .07, 0, 480);
+        break;
+      case 'chain':
+        this.tone(2200, .04, 'sawtooth', .05, 0, 900);
+        this.noise(.05, .06, 4200);
+        break;
+      case 'hunter':
+        this.tone(260, .22, 'sawtooth', .09, 0, 640);
+        this.noise(.16, .07, 1500);
         break;
       case 'boss':
         this.tone(90, .7, 'sawtooth', .17, 0, 45);
@@ -244,93 +261,73 @@ const Sound = {
       case 'event':
         this.tone(320, .35, 'sine', .11, 0, 520);
         break;
+
+      /* ---------- KỸ NĂNG QUÁI / BOSS ---------- */
+      case 'charge':
+        this.tone(120, .5, 'sawtooth', .07, 0, 420);
+        this.noise(.35, .05, 900);
+        break;
+      case 'skill':
+        this.tone(520, .16, 'square', .09, 0, 900);
+        this.tone(780, .12, 'square', .06, .05);
+        break;
+      case 'slam':
+        this.noise(.32, .22, 620);
+        this.tone(64, .38, 'sine', .2, 0, 30);
+        this.tone(180, .12, 'square', .07);
+        break;
+      case 'shockwave':
+        this.noise(.28, .14, 1500);
+        this.tone(220, .3, 'sawtooth', .1, 0, 60);
+        break;
+      case 'laser':
+        this.tone(1800, .22, 'sawtooth', .11, 0, 260);
+        this.noise(.18, .07, 4200);
+        break;
+      case 'beam':
+        this.tone(1200, .3, 'square', .08, 0, 1500);
+        break;
+      case 'summon':
+        this.tone(180, .45, 'sine', .1, 0, 420);
+        this.tone(360, .3, 'triangle', .07, .1);
+        this.noise(.25, .05, 1200);
+        break;
+      case 'enrage':
+        this.tone(90, .8, 'sawtooth', .16, 0, 40);
+        this.tone(135, .7, 'square', .08, .1, 60);
+        this.noise(.6, .1, 500);
+        break;
       default:
         break;
     }
   },
 
   /* =========================================================
-     MUSIC (procedural, không dùng file mp3)
+     MUSIC — delegate sang engine toán học (systems/music.js)
      ========================================================= */
   startMusic(name) {
     if (!this.ready) return;
-    if (this.curName === name && this.musicTimer) return;
-
-    this.stopMusic();
-    this.curName = name;
-    this.curPattern = MUSIC_PATTERNS[name] || MUSIC_PATTERNS.game;
-    this.step = 0;
-    this.nextTime = this.ctx.currentTime + .05;
-    this.musicTimer = setInterval(() => this.musicTick(), 60);
+    if (!Settings.get('musicOn')) return;
+    Music.play(name);
   },
 
   stopMusic() {
-    if (this.musicTimer) {
-      clearInterval(this.musicTimer);
-      this.musicTimer = null;
-    }
-    this.curName = null;
+    Music.stop(.45);
   },
 
-  musicTick() {
-    if (!this.ready || !this.curPattern) return;
-    if (!Settings.get('musicOn')) return;
-
-    const spb = 60 / this.curPattern.bpm;
-    const stepDur = spb / 2;
-
-    while (this.nextTime < this.ctx.currentTime + .25) {
-      this.playStep(this.step, this.nextTime, stepDur);
-      this.nextTime += stepDur;
-      this.step = (this.step + 1) % 8;
-    }
+  /** Độ căng thẳng 0..1 — mở layer + đổi bài boss theo % máu. */
+  setDanger(x) {
+    Music.setDanger(x);
   },
 
-  playStep(i, t, dur) {
-    const P = this.curPattern;
-
-    /* Bass */
-    const bass = P.bass[i];
-    if (bass !== null && bass !== undefined) {
-      const f = 55 * Math.pow(2, bass / 12);
-      this.mnote(f, t, dur * 1.7, 'sawtooth', .24, 600);
-    }
-
-    /* Lead */
-    const lead = P.lead[i];
-    if (lead !== null && lead !== undefined) {
-      const f = 220 * Math.pow(2, lead / 12);
-      this.mnote(f, t, dur * .9, P.wave || 'triangle', .11, 3200);
-    }
-
-    /* Kick đơn giản mỗi 2 step */
-    if (i % 2 === 0) {
-      this.mnote(70, t, .05, 'square', .05, 400);
-    }
+  /** Vào trận boss: warning → criticality → meltdown. */
+  startBossMusic() {
+    if (!this.ready || !Settings.get('musicOn')) return;
+    Music.playBoss();
   },
 
-  mnote(freq, t, dur, type, vol, cutoff) {
-    if (!this.ctx || !this.musicGain) return;
-
-    const o = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
-    const f = this.ctx.createBiquadFilter();
-
-    o.type = type;
-    o.frequency.setValueAtTime(freq, t);
-
-    f.type = 'lowpass';
-    f.frequency.value = cutoff || 2000;
-
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(vol, t + .012);
-    g.gain.exponentialRampToValueAtTime(.0008, t + dur);
-
-    o.connect(f);
-    f.connect(g);
-    g.connect(this.musicGain);
-    o.start(t);
-    o.stop(t + dur + .03);
+  get musicTrack() {
+    return Music.currentName;
   }
 };
 

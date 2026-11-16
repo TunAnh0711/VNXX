@@ -1,0 +1,422 @@
+/* =========================================================
+   VNXX — COMBAT UI (Combo · Overdrive) + SHOP v2
+   ========================================================= */
+
+/* =========================================================
+   COMBO
+   ========================================================= */
+#comboWrap {
+  position: absolute;
+  top: 96px;
+  right: 26px;
+  width: 132px;
+  text-align: right;
+  pointer-events: none;
+  transition: transform .12s ease-out;
+  z-index: 6;
+}
+
+#comboWrap.hidden { display: none; }
+
+.combo-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 2px;
+  line-height: 1;
+}
+
+#comboCount {
+  font-size: 38px;
+  font-weight: bold;
+  letter-spacing: -1px;
+  color: #eafcff;
+  text-shadow: 0 0 12px rgba(40, 224, 255, .8);
+}
+
+.combo-x {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--cyan);
+  opacity: .8;
+}
+
+.combo-bar {
+  height: 3px;
+  background: rgba(255, 255, 255, .12);
+  margin: 6px 0 4px;
+  overflow: hidden;
+}
+
+#comboFill {
+  height: 100%;
+  width: 0%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  transition: width .08s linear;
+}
+
+.combo-mult {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--cyan);
+  opacity: .85;
+}
+
+/* tier màu theo chuỗi */
+#comboWrap[data-tier="1"] #comboCount { color: #bff3ff; }
+#comboWrap[data-tier="2"] #comboCount { color: #7fe9ff; text-shadow: 0 0 14px rgba(40,224,255,.9); }
+#comboWrap[data-tier="3"] #comboCount { color: var(--amber); text-shadow: 0 0 16px rgba(255,196,77,.9); }
+#comboWrap[data-tier="3"] .combo-mult { color: var(--amber); }
+#comboWrap[data-tier="4"] #comboCount { color: #ff5ad0; text-shadow: 0 0 20px rgba(255,90,208,.95); }
+#comboWrap[data-tier="4"] .combo-mult { color: #ff5ad0; }
+#comboWrap[data-tier="4"] #comboFill { background: #ff5ad0; box-shadow: 0 0 10px #ff5ad0; }
+
+/* =========================================================
+   OVERDRIVE
+   ========================================================= */
+#odWrap {
+  position: absolute;
+  left: 50%;
+  bottom: 62px;
+  transform: translateX(-50%);
+  width: 300px;
+  pointer-events: none;
+  z-index: 6;
+}
+
+#odWrap.hidden { display: none; }
+
+.od-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.od-name {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  transition: var(--transition);
+}
+
+.od-key {
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  padding: 1px 6px;
+  letter-spacing: 1px;
+}
+
+.od-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .10);
+  overflow: hidden;
+  position: relative;
+}
+
+#odFill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #0aa8cc, #28e0ff);
+  transition: width .1s linear;
+}
+
+.od-active {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  font-size: 11px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: var(--amber);
+  text-shadow: 0 0 10px rgba(255, 196, 77, .9);
+}
+
+.od-active.hidden { display: none; }
+
+/* trạng thái sẵn sàng */
+#odWrap.ready .od-name {
+  color: var(--amber);
+  text-shadow: 0 0 10px rgba(255, 196, 77, .8);
+}
+#odWrap.ready .od-key {
+  color: #05080c;
+  background: var(--amber);
+  border-color: var(--amber);
+  animation: odKeyPulse 1s infinite;
+}
+#odWrap.ready #odFill {
+  background: linear-gradient(90deg, #ffc44d, #fff3c4);
+  box-shadow: 0 0 14px rgba(255, 196, 77, .9);
+}
+
+@keyframes odKeyPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
+/* trạng thái đang bung */
+#odWrap.active .od-name {
+  color: #fff;
+  letter-spacing: 4px;
+}
+#odWrap.active #odFill {
+  background: linear-gradient(90deg, #ff7a2f, #ffc44d, #fff3c4);
+  box-shadow: 0 0 18px rgba(255, 196, 77, 1);
+}
+#odWrap.active .od-bar {
+  border-color: rgba(255, 196, 77, .6);
+  box-shadow: 0 0 12px rgba(255, 196, 77, .45);
+}
+
+/* =========================================================
+   SHOP v2
+   ========================================================= */
+.shop-panel {
+  min-width: 860px;
+  max-width: 940px;
+}
+
+.shop-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.shop-head h2 {
+  margin: 0;
+  letter-spacing: 8px;
+}
+
+.shop-wallet {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+  letter-spacing: 1px;
+}
+
+.shop-wallet .w-cr { color: var(--amber); }
+.shop-wallet .w-sh { color: var(--purple); }
+.shop-wallet b { font-size: 16px; }
+
+/* Tabs */
+.shop-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.shop-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 12px;
+  letter-spacing: 3px;
+  padding: 9px 18px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.shop-tab:hover { color: var(--txt); }
+
+.shop-tab.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+  text-shadow: 0 0 10px var(--cyan-glow);
+}
+
+/* Grid */
+.shop-body { min-height: 300px; }
+
+.shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.shop-grid.hidden { display: none; }
+
+/* Card */
+.shop-card {
+  position: relative;
+  border: 1px solid var(--line);
+  background: rgba(8, 14, 22, .72);
+  padding: 12px 13px;
+  cursor: pointer;
+  transition: var(--transition);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 132px;
+}
+
+.shop-card::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--rc, var(--line));
+  opacity: .75;
+}
+
+.shop-card:hover {
+  border-color: var(--rc, var(--cyan));
+  background: rgba(13, 24, 34, .92);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .6), 0 0 14px color-mix(in srgb, var(--rc, #28e0ff) 30%, transparent);
+}
+
+.shop-card.locked {
+  border-color: var(--amber);
+  box-shadow: 0 0 12px rgba(255, 196, 77, .25);
+}
+
+.shop-card.maxed {
+  opacity: .55;
+  cursor: default;
+}
+
+.shop-card.maxed:hover { transform: none; }
+
+.sc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  letter-spacing: 1px;
+  min-height: 14px;
+}
+
+.sc-rar { letter-spacing: 1px; }
+
+.sc-meta {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 1px;
+}
+
+.sc-name {
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+.sc-desc {
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.5;
+  flex: 1;
+}
+
+.sc-cmp { font-size: 10px; letter-spacing: 1px; }
+.sc-cmp .up   { color: var(--green); }
+.sc-cmp .down { color: var(--red); }
+
+.sc-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2px;
+}
+
+.sc-price {
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1.5px;
+  color: var(--amber);
+}
+
+.sc-price.no { color: var(--muted); opacity: .6; }
+.sc-price.sell-price { color: var(--green); }
+
+.sc-lock {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  width: 26px;
+  height: 22px;
+  cursor: pointer;
+  line-height: 1;
+  transition: var(--transition);
+  padding: 0;
+}
+
+.sc-lock:hover { border-color: var(--amber); color: var(--amber); }
+.sc-lock.on {
+  border-color: var(--amber);
+  background: rgba(255, 196, 77, .15);
+}
+
+/* Shard card */
+.shop-card.shard::before { background: var(--purple); }
+.shop-card.shard:hover {
+  border-color: var(--purple);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .6), 0 0 14px rgba(160, 107, 255, .3);
+}
+
+/* Sell card */
+.shop-card.sell::before { background: var(--green); }
+.shop-card.sell:hover {
+  border-color: var(--green);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .6), 0 0 14px rgba(57, 255, 158, .25);
+}
+
+/* Footer */
+.shop-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.shop-foot .btn { flex: 0 0 auto; }
+.shop-foot .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* Epic level-up card */
+.card.epic {
+  border-color: var(--purple);
+  background: linear-gradient(180deg, rgba(28, 14, 46, .95), rgba(8, 5, 16, .96));
+}
+.card.epic .ci { color: var(--purple); filter: drop-shadow(0 0 12px rgba(160, 107, 255, .8)); }
+.card.epic:hover {
+  border-color: var(--purple);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, .8), 0 0 26px rgba(160, 107, 255, .45);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+@media (max-width: 900px) {
+  .shop-panel { min-width: auto; width: 94vw; max-height: 92vh; overflow-y: auto; }
+  .shop-grid { grid-template-columns: repeat(2, 1fr); }
+  #comboWrap { top: 84px; right: 14px; width: 104px; }
+  #comboCount { font-size: 30px; }
+  #odWrap { width: 230px; bottom: 96px; }
+
+  /* Giữ nút hành động luôn thấy khi phải cuộn */
+  .shop-foot {
+    position: sticky;
+    bottom: 0;
+    padding: 10px 0 4px;
+    background: linear-gradient(180deg, rgba(4, 8, 14, 0), rgba(4, 8, 14, .96) 40%);
+    z-index: 3;
+  }
+}
+
+@media (max-width: 560px) {
+  .shop-grid { grid-template-columns: 1fr; }
+  .shop-head { flex-direction: column; gap: 8px; align-items: flex-start; }
+  #odWrap { width: 180px; }
+}

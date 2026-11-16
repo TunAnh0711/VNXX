@@ -12,6 +12,7 @@ const DEFAULTS = {
   musicOn:    true,
   fxOn:       true,
   shakeOn:    true,
+  gfx3d:      true,          // ← lớp đồ họa 2.5D (shadow/light/bevel)
   perf:       'auto',        // 'auto' | 'high' | 'low'
   masterVol:  70,            // 0..100
   musicVol:   45,            // 0..100
@@ -94,6 +95,7 @@ const Settings = {
       case 'musicOn':
       case 'fxOn':
       case 'shakeOn':
+      case 'gfx3d':
       case 'tutorial':
       case 'mobileMode':
         this.data[key] = !!v;

@@ -1,7 +1,14 @@
 /* =========================================================
    VNXX — DATA / STAGES
-   5 stage với đầy đủ theme, pool quái, boss, lore.
-   Chỉnh balance / thêm stage → chỉ sửa file này.
+   5 stage: theme, layout map, pool quái, boss, hazard, lore.
+
+   Field mới:
+   - layout     : kiểu sinh map ('open' | 'rooms' | 'pillars' | 'maze' | 'arena')
+   - hazards    : danh sách loại bẫy môi trường có thể xuất hiện
+   - hazardRate : số lượng hazard
+   - barrels    : số thùng nổ
+   - crates     : số thùng tiếp tế
+   - obstacleScale : độ dày đặc vật cản
    ========================================================= */
 
 export const STAGES = [
@@ -15,8 +22,14 @@ export const STAGES = [
     grid: '#0f1e2b',
     wall: '#1a3145',
     accent: '#28e0ff',
-    pool: ['drone', 'runner', 'swarm', 'shooter'],
-    music: 'game',
+    pool: ['drone', 'runner', 'swarm', 'shooter', 'flyer', 'turret'],
+    music: 'abandoned',
+    layout: 'rooms',
+    hazards: ['tesla'],
+    hazardRate: 3,
+    barrels: 5,
+    crates: 4,
+    obstacleScale: 1.0,
     lore: 'CƠ SỞ BỎ HOANG. HỆ THỐNG VẪN CÒN THỨC.'
   },
 
@@ -30,8 +43,14 @@ export const STAGES = [
     grid: '#241a0c',
     wall: '#3d2b12',
     accent: '#ffa53a',
-    pool: ['drone', 'tank', 'shooter', 'exploder', 'runner'],
-    music: 'game',
+    pool: ['drone', 'tank', 'shooter', 'exploder', 'runner', 'charger', 'turret', 'brute'],
+    music: 'industrial',
+    layout: 'pillars',
+    hazards: ['lava', 'steam'],
+    hazardRate: 5,
+    barrels: 8,
+    crates: 4,
+    obstacleScale: 1.25,
     lore: 'KHU CÔNG NGHIỆP. LÒ PHẢN ỨNG CHƯA TẮT.'
   },
 
@@ -45,8 +64,14 @@ export const STAGES = [
     grid: '#1d1035',
     wall: '#331a5c',
     accent: '#ff2fd0',
-    pool: ['runner', 'assassin', 'shooter', 'swarm', 'shield'],
-    music: 'game',
+    pool: ['runner', 'assassin', 'shooter', 'swarm', 'shield', 'sniper_unit', 'summoner', 'flyer'],
+    music: 'neon',
+    layout: 'maze',
+    hazards: ['shockgrid', 'holo'],
+    hazardRate: 5,
+    barrels: 5,
+    crates: 5,
+    obstacleScale: 1.15,
     lore: 'THÀNH PHỐ NEON. TÍN HIỆU GIẢ ĐANG LAN TRUYỀN.'
   },
 
@@ -60,8 +85,14 @@ export const STAGES = [
     grid: '#1c1c1c',
     wall: '#2e2e2e',
     accent: '#ff3b52',
-    pool: ['tank', 'assassin', 'exploder', 'shield', 'shooter'],
-    music: 'game',
+    pool: ['tank', 'assassin', 'exploder', 'shield', 'shooter', 'burrower', 'brute', 'leech', 'splitter'],
+    music: 'dead',
+    layout: 'arena',
+    hazards: ['voidrift', 'lava'],
+    hazardRate: 6,
+    barrels: 6,
+    crates: 3,
+    obstacleScale: 0.85,
     lore: 'KHU VỰC CHẾT. KHÔNG CÓ SỰ SỐNG. CHỈ CÓ THỨ ĐANG CHỜ.'
   },
 
@@ -75,8 +106,15 @@ export const STAGES = [
     grid: '#150a2e',
     wall: '#2a1150',
     accent: '#a06bff',
-    pool: ['drone', 'runner', 'tank', 'shooter', 'swarm', 'assassin', 'shield', 'exploder'],
-    music: 'boss',
+    pool: ['drone', 'runner', 'tank', 'shooter', 'swarm', 'assassin', 'shield', 'exploder',
+           'charger', 'sniper_unit', 'summoner', 'splitter', 'flyer', 'burrower', 'brute', 'leech', 'turret'],
+    music: 'void',
+    layout: 'open',
+    hazards: ['voidrift', 'shockgrid', 'lava'],
+    hazardRate: 7,
+    barrels: 7,
+    crates: 4,
+    obstacleScale: 1.0,
     lore: 'LÕI HƯ KHÔNG. ĐIỂM KẾT THÚC CỦA MỌI THỨ.'
   }
 ];
@@ -91,40 +129,33 @@ export const LAST_STAGE_ID = STAGES[STAGES.length - 1].id;
    HELPERS
    ========================================================= */
 
-/** Lấy stage theo id (1-based) hoặc clamp về stage cuối nếu vượt. */
 export function getStage(id) {
   if (!id || id < 1) return STAGES[0];
   return STAGES[Math.min(id - 1, STAGES.length - 1)];
 }
 
-/** Lấy stage theo index 0-based. */
 export function getStageByIndex(idx) {
   return STAGES[Math.max(0, Math.min(idx, STAGES.length - 1))];
 }
 
-/** Kiểm tra stage id có hợp lệ (trong khoảng 1..count). */
 export function isValidStage(id) {
   return Number.isInteger(id) && id >= 1 && id <= STAGES.length;
 }
 
-/** Có phải stage cuối cùng (để hiển thị "kết thúc game"). */
 export function isLastStage(id) {
   return id >= STAGES.length;
 }
 
-/** Wave có phải wave boss không. */
 export function isBossWave(stageId, wave) {
   const stage = getStage(stageId);
   return wave > stage.waves;
 }
 
-/** Stage kế tiếp (null nếu đã cuối). */
 export function nextStage(id) {
   if (isLastStage(id)) return null;
   return getStage(id + 1);
 }
 
-/** Nhạc nên phát cho stage (fallback 'game'). */
 export function stageMusic(id) {
   return getStage(id).music || 'game';
 }

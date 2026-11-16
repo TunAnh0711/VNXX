@@ -13,6 +13,7 @@ import Sound from './systems/sound.js';
 import Save from './systems/save.js';
 import { Fx, FloatText } from './systems/fx.js';
 import Net from './systems/net.js';
+import { initMenuFX } from './systems/menu-fx.js';
 
 /* ---------- GAME ---------- */
 import Game from './game/game.js';
@@ -34,6 +35,8 @@ import { initLanUI } from './ui/lan-ui.js';
 import * as lanUI from './ui/lan-ui.js';
 import { initMobileUI } from './ui/mobile-ui.js';
 import * as mobileUI from './ui/mobile-ui.js';
+import { initWardrobeUI } from './ui/wardrobe-ui.js';
+import * as wardrobeUI from './ui/wardrobe-ui.js';
 
 /* ---------- DEBUG ---------- */
 import { installDebugCommands } from './debug.js';
@@ -60,7 +63,11 @@ function boot() {
   initShopUI();
   initInventoryUI();
   initLanUI();
+  initWardrobeUI();
   initMobileUI();
+
+  /* 5b. Menu FX (particles, ripple, transitions) */
+  initMenuFX();
 
   /* 6. Net bindings */
   Net.bind({
@@ -90,11 +97,16 @@ function boot() {
     shop: shopUI,
     lan: lanUI,
     mobile: mobileUI,
+    wardrobe: wardrobeUI,
 
     /* Meta */
-    version: '1.0.0',
-    build: '001'
+    name: 'HALF NIFE',
+    version: '2.0.0',
+    build: '002'
   });
+
+  /* Alias tên mới — code cũ vẫn dùng window.VNXX */
+  window.HALFNIFE = window.VNXX;
 
   /* 10. Global shortcuts cho submodules */
   window.addToast = addToast;
@@ -106,17 +118,17 @@ function boot() {
     try {
       mobileUI.applyMobileMode();
     } catch (err) {
-      console.warn('[VNXX] applyMobileMode failed:', err);
+      console.warn('[HALF NIFE] applyMobileMode failed:', err);
     }
   }
 
   /* 12. Console banner */
   console.log(
-    '%cVNXX v1.0.0 — BUILD 001',
-    'color:#28e0ff;font-weight:bold;font-size:14px;text-shadow:0 0 8px #28e0ff'
+    '%cHALF NIFE v2.0.0 — BUILD 002',
+    'color:#28e0ff;font-weight:bold;font-size:15px;text-shadow:0 0 10px #28e0ff'
   );
   console.log(
-    '%cGõ VNXX.cmd.help() để xem lệnh debug.',
+    '%cCắt đôi lò phản ứng. Gõ HALFNIFE.cmd.help() để xem lệnh debug.',
     'color:#5d7d92'
   );
 }
@@ -139,7 +151,7 @@ window.addEventListener('beforeunload', () => {
       Game.syncProfileFromWorld();
       Save.auto(Game.profile);
     } catch (err) {
-      console.warn('[VNXX] beforeunload save failed', err);
+      console.warn('[HALF NIFE] beforeunload save failed', err);
     }
   }
 });
@@ -158,11 +170,11 @@ window.addEventListener('touchstart',  unlockAudioOnce, { once: true });
 
 /* Bắt lỗi runtime để không trắng màn hình im lặng */
 window.addEventListener('error', (e) => {
-  console.error('[VNXX] Runtime error:', e.error || e.message);
+  console.error('[HALF NIFE] Runtime error:', e.error || e.message);
   try { addToast('⚠ LỖI: ' + (e.message || 'unknown')); } catch (_) {}
 });
 window.addEventListener('unhandledrejection', (e) => {
-  console.error('[VNXX] Unhandled promise:', e.reason);
+  console.error('[HALF NIFE] Unhandled promise:', e.reason);
 });
 
 /* Chặn scroll/zoom trên mobile khi chơi */

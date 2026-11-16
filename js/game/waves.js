@@ -19,6 +19,7 @@ import { FloatText } from '../systems/fx.js';
 import { spawnFromQueue, spawnEnemy } from './enemy.js';
 import { spawnBoss } from './boss.js';
 import { spawnChest } from './loot.js';
+import { queueCost } from '../data/enemies.js';
 
 /* =========================================================
    START WAVE
@@ -141,17 +142,6 @@ function buildSpawnQueue(game, W, def, pool) {
     W.spawnQueue.push(type);
     budget -= cost;
   }
-}
-
-/** Chi phí "budget" cho từng enemy type. */
-function queueCost(type) {
-  if (type === 'swarm')    return 1;
-  if (type === 'tank')     return 5;
-  if (type === 'assassin') return 4;
-  if (type === 'exploder') return 3;
-  if (type === 'shield')   return 3;
-  if (type === 'shooter')  return 2;
-  return 2;    // drone, runner
 }
 
 /* =========================================================
@@ -313,7 +303,7 @@ export function completeWave(game, W) {
   if (isLastWave) {
     /* Chuyển sang boss wave */
     setTimeout(() => {
-      if (!game.world) return;
+      if (game.world !== W) return;
       if (game.state === 'GAME_OVER' || game.state === 'HARDCORE_DEAD') return;
       startWave(game, W, W.wave + 1);
     }, 2600);
@@ -323,7 +313,7 @@ export function completeWave(game, W) {
   /* Cứ 3 wave mở shop */
   if (W.wave % 3 === 0) {
     setTimeout(() => {
-      if (!game.world) return;
+      if (game.world !== W) return;
       if (game.state === 'GAME_OVER' || game.state === 'HARDCORE_DEAD') return;
       game.openShop(function () {
         startWave(game, W, W.wave + 1);
@@ -331,7 +321,7 @@ export function completeWave(game, W) {
     }, 1200);
   } else {
     setTimeout(() => {
-      if (!game.world) return;
+      if (game.world !== W) return;
       if (game.state === 'GAME_OVER' || game.state === 'HARDCORE_DEAD') return;
       startWave(game, W, W.wave + 1);
     }, 2400);

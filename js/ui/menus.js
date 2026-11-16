@@ -43,6 +43,8 @@ function G() {
    MAIN MENU
    ========================================================= */
 function bindMainMenu() {
+  const menu = document.getElementById('screen-menu');
+
   document.querySelectorAll('#screen-menu [data-act]').forEach((b) => {
     b.addEventListener('click', () => {
       Sound.init();
@@ -86,6 +88,45 @@ function bindMainMenu() {
       }
     });
   });
+
+  /* Shortcut khớp keycap trên menu: N/L/W/M/A/S. */
+  document.addEventListener('keydown', (e) => {
+    if (!menu || !menu.classList.contains('active') || e.repeat) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = e.target && e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+    const selectors = {
+      n: '[data-act="new"]', l: '[data-act="load"]',
+      w: '#menuWardrobeBtn', m: '#menuLanBtn',
+      a: '[data-act="ach"]', s: '[data-act="settings"]'
+    };
+    const selector = selectors[String(e.key).toLowerCase()];
+    if (!selector) return;
+    const btn = menu.querySelector(selector);
+    if (btn) { e.preventDefault(); btn.click(); }
+  });
+
+  /* Hồ sơ chiến đấu trên menu tự cập nhật mỗi lần quay về. */
+  updateMainMenuCareer();
+  if (menu) {
+    const obs = new MutationObserver(() => {
+      if (menu.classList.contains('active')) updateMainMenuCareer();
+    });
+    obs.observe(menu, { attributes: true, attributeFilter: ['class'] });
+  }
+}
+
+function updateMainMenuCareer() {
+  const g = G();
+  const p = g && g.profile;
+  const stats = (p && p.statistics) || {};
+  const nameEl = document.getElementById('menuProfileName');
+  const levelEl = document.getElementById('menuBestLevel');
+  const killsEl = document.getElementById('menuTotalKills');
+  if (nameEl) nameEl.textContent = p && p.playerName ? p.playerName : 'CHƯA CÓ HỒ SƠ';
+  if (levelEl) levelEl.textContent = p ? String(stats.highestLevel || p.level || 1) : '—';
+  if (killsEl) killsEl.textContent = p ? String(stats.kills || 0) : '—';
 }
 
 /* =========================================================
@@ -156,6 +197,7 @@ function bindSettingsScreen() {
   });
 
   bindSwitch('swFx', 'fxOn', () => { /* no-op */ });
+  bindSwitch('swGfx3d', 'gfx3d', () => { /* canvas đọc setting mỗi frame */ });
   bindSwitch('swShake', 'shakeOn', () => { /* no-op */ });
 
   /* Mobile mode — toggle joystick + action buttons */
@@ -264,6 +306,7 @@ export function syncSettingsUI() {
   toggleClass('swSfx',    d.sfxOn);
   toggleClass('swMusic',  d.musicOn);
   toggleClass('swFx',     d.fxOn);
+  toggleClass('swGfx3d',  d.gfx3d);
   toggleClass('swShake',  d.shakeOn);
   toggleClass('swMobile', d.mobileMode);
 
@@ -317,7 +360,7 @@ function buildAchList() {
   import('../data/achievements.js').then(({ ACHIEVEMENTS }) => {
     ACHIEVEMENTS.forEach((a) => {
       const d = document.createElement('div');
-      d.className = 'shop-row';
+      d.className = 'shop-row ach-card';
       d.dataset.ach = a.id;
       d.innerHTML =
         '<div>' +
@@ -339,7 +382,7 @@ function renderAchList() {
 
   const unlocked = (g.profile && g.profile.achievements) || [];
 
-  document.querySelectorAll('#achList .shop-row').forEach((row) => {
+  document.querySelectorAll('#achList .ach-card').forEach((row) => {
     const id = row.dataset.ach;
     const got = unlocked.includes(id);
     const price = row.querySelector('.sprice');

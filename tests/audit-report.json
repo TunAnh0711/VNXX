@@ -1,0 +1,14 @@
+{
+  "errors": [],
+  "warns": [
+    "CSS selector không thấy class trong HTML (có thể dead/dộng, 54): shop-card, maxed, sc-top, sc-rar, sc-meta, sc-name, sc-desc, sc-cmp, down, sc-foot, sc-price, sell-price, sc-lock, shard, sell, card, epic, diff-opt, save-card, shop-row, inv-slot, skin-card, btn-ripple-effect, ach-card, unlocked…"
+  ],
+  "ok": [
+    "Cấu trúc HTML hợp lệ — 19 screen, không có screen nào lồng trong screen khác, không có thẻ lồng lệch",
+    "Tất cả 129 ID được JS tham chiếu đều tồn tại trong HTML",
+    "Tất cả class HTML/JS đều có rule CSS tương ứng",
+    "Tất cả import trong 57 file JS đều hợp lệ",
+    "Syntax check 57/57 file JS đều hợp lệ (node --check)",
+    "Cân bằng ngoặc 10 file CSS OK"
+  ]
+}

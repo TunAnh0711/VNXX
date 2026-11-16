@@ -1,0 +1,481 @@
+/* =========================================================
+   HALF NIFE — FX-UI v3.0
+   Liquid Glass + Sci-Fi + 3D Depth + Cinematic Transitions
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   1. LIQUID GLASS TOKENS
+   --------------------------------------------------------- */
+:root {
+  --glass-bg:       rgba(12, 22, 34, 0.55);
+  --glass-border:   rgba(255, 255, 255, 0.09);
+  --glass-highlight:rgba(255, 255, 255, 0.06);
+  --glass-shadow:   0 8px 32px rgba(0, 0, 0, 0.45),
+                    inset 0 1px 0 rgba(255,255,255,0.06),
+                    inset 0 0 0 1px rgba(255,255,255,0.03);
+  --glass-liquid:   blur(22px) saturate(1.6) brightness(1.12);
+  --neon-cyan:      0 0 6px rgba(40,224,255,0.55), 0 0 18px rgba(40,224,255,0.25);
+  --neon-red:       0 0 6px rgba(255,59,82,0.55), 0 0 18px rgba(255,59,82,0.25);
+  --neon-amber:     0 0 6px rgba(255,196,77,0.55), 0 0 18px rgba(255,196,77,0.25);
+  --3d-persp:       900px;
+  --ease-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-smooth:    cubic-bezier(0.25, 0.8, 0.25, 1);
+  --ease-power:     cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---------------------------------------------------------
+   2. LIQUID GLASS PANEL
+   --------------------------------------------------------- */
+.panel.liquid,
+#screen-lan .panel,
+#screen-menu .panel,
+#screen-settings .panel,
+#screen-achievements .panel,
+#screen-wardrobe .panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: var(--glass-liquid);
+  -webkit-backdrop-filter: var(--glass-liquid);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Highlight trên cạnh trên tạo cảm giác kính cong */
+#screen-lan .panel::after,
+#screen-menu .panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.07) 0%,
+    rgba(255,255,255,0.02) 40%,
+    transparent 60%
+  );
+  opacity: 0.12;
+}
+
+/* Edge glow — quầng sáng mỏng xung quanh panel (tắt trong headless test) */
+#screen-lan .panel::before {
+  content: none;
+}
+
+/* ---------------------------------------------------------
+   3. 3D BUTTONS — Holographic Tactile
+   --------------------------------------------------------- */
+.btn-3d,
+#screen-lan .btn,
+#screen-settings .btn,
+#screen-achievements .btn,
+.diff-opt,
+.save-card,
+.shop-row,
+.inv-slot,
+.skin-card {
+  transform-style: preserve-3d;
+  transition: transform 0.22s var(--ease-spring),
+              box-shadow 0.22s var(--ease-smooth),
+              border-color 0.18s;
+}
+
+.btn-3d:hover,
+#screen-lan .btn:hover,
+.diff-opt:hover,
+.save-card:hover,
+.shop-row:hover,
+.inv-slot:hover,
+.skin-card:hover {
+  transform: perspective(var(--3d-persp)) rotateX(4deg) rotateY(-3deg) translateZ(8px) translateY(-2px);
+  box-shadow: 0 14px 36px rgba(0,0,0,0.55),
+              0 0 0 1px rgba(40,224,255,0.25),
+              var(--neon-cyan);
+}
+
+.btn-3d:active,
+#screen-lan .btn:active,
+.diff-opt:active,
+.skin-card:active {
+  transform: perspective(var(--3d-persp)) rotateX(0deg) rotateY(0deg) translateZ(-4px) scale(0.97);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* Ripple burst khi click */
+@keyframes btn-ripple {
+  0%   { transform: scale(0); opacity: 0.55; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+.btn-ripple-effect {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(40, 224, 255, 0.35);
+  pointer-events: none;
+  animation: btn-ripple 0.55s var(--ease-power) forwards;
+}
+
+/* Sweep laser — nhanh hơn, sáng hơn */
+.btn-laser::before,
+#screen-lan .btn::before,
+#screen-settings .btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -120%; width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(40,224,255,0.35), rgba(255,255,255,0.15), transparent);
+  transform: skewX(-28deg);
+  transition: left 0.45s var(--ease-smooth);
+  pointer-events: none;
+}
+.btn-laser:hover::before,
+#screen-lan .btn:hover::before {
+  left: 140%;
+}
+
+/* ---------------------------------------------------------
+   4. CINEMATIC SCREEN TRANSITIONS
+   --------------------------------------------------------- */
+
+/* Glitch flash khi chuyển màn */
+@keyframes transition-glitch {
+  0%   { opacity: 0; transform: scale(1.02); filter: brightness(2) contrast(1.4) hue-rotate(30deg); }
+  15%  { opacity: 1; transform: scale(0.998); filter: brightness(1.1) contrast(1.1) hue-rotate(0deg); }
+  30%  { opacity: 0.8; transform: scale(1.001); filter: brightness(1.3) contrast(1.2); }
+  45%  { opacity: 1; transform: scale(1); filter: none; }
+  100% { opacity: 1; transform: scale(1); filter: none; }
+}
+.screen.active.glitch-in {
+  animation: transition-glitch 0.38s var(--ease-power) forwards;
+}
+
+/* Scanline wipe */
+@keyframes scan-wipe {
+  0%   { clip-path: inset(0 0 100% 0); }
+  100% { clip-path: inset(0 0 0% 0); }
+}
+.screen.active.scan-in {
+  animation: scan-wipe 0.28s var(--ease-power) forwards;
+}
+
+/* Data-decode text effect */
+@keyframes decode-text {
+  0%   { opacity: 0; filter: blur(6px); letter-spacing: 12px; }
+  40%  { opacity: 1; filter: blur(2px); letter-spacing: 6px; }
+  70%  { filter: blur(0); letter-spacing: 3px; }
+  100% { letter-spacing: inherit; }
+}
+.decode-in {
+  animation: decode-text 0.45s var(--ease-power) forwards;
+}
+
+/* ---------------------------------------------------------
+   5. SCI-FI INPUTS — Terminal / Hologram
+   --------------------------------------------------------- */
+input[type="text"].sci-fi,
+#lanCodeInput,
+textarea.sci-fi {
+  background: rgba(4, 8, 14, 0.72);
+  border: 1px solid rgba(40, 224, 255, 0.18);
+  border-bottom: 2px solid rgba(40, 224, 255, 0.35);
+  color: var(--cyan);
+  font-family: var(--font);
+  font-size: 16px;
+  padding: 14px 18px;
+  outline: none;
+  letter-spacing: 4px;
+  border-radius: 8px;
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.6), 0 0 0 rgba(40,224,255,0);
+  transition: all 0.25s var(--ease-smooth);
+  position: relative;
+}
+
+input[type="text"].sci-fi:focus,
+#lanCodeInput:focus {
+  border-color: rgba(40, 224, 255, 0.65);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.5),
+              0 0 20px rgba(40,224,255,0.18),
+              0 0 0 1px rgba(40,224,255,0.15);
+  background: rgba(6, 14, 22, 0.88);
+}
+
+/* Cursor blink như terminal */
+input[type="text"].sci-fi::placeholder,
+#lanCodeInput::placeholder {
+  color: rgba(93, 125, 146, 0.5);
+  letter-spacing: 3px;
+}
+
+/* Glowing caret */
+input[type="text"].sci-fi,
+#lanCodeInput {
+  caret-color: var(--cyan);
+}
+
+/* Label sci-fi */
+label.sci-fi,
+#screen-lan label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  position: relative;
+  padding-left: 14px;
+}
+label.sci-fi::before,
+#screen-lan label::before {
+  content: '›';
+  position: absolute;
+  left: 0;
+  color: var(--cyan);
+  opacity: 0.7;
+}
+
+/* ---------------------------------------------------------
+   6. HUD ENEMY COUNTER
+   --------------------------------------------------------- */
+#enemyCounter {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(4, 8, 14, 0.75);
+  border: 1px solid rgba(255, 59, 82, 0.25);
+  padding: 6px 18px;
+  border-radius: 20px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #ff8a95;
+  text-shadow: 0 0 8px rgba(255, 59, 82, 0.4);
+  backdrop-filter: blur(8px);
+  z-index: 15;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+#enemyCounter.on {
+  opacity: 1;
+}
+#enemyCounter .ec-icon {
+  width: 8px;
+  height: 8px;
+  background: var(--red);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--red-glow);
+  animation: ec-pulse 1.4s ease-in-out infinite;
+}
+@keyframes ec-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.4); opacity: 0.7; }
+}
+#enemyCounter .ec-num {
+  font-weight: bold;
+  font-size: 14px;
+  color: #fff;
+  min-width: 18px;
+  text-align: center;
+}
+#enemyCounter .ec-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------
+   7. ACHIEVEMENTS — Holographic Cards
+   --------------------------------------------------------- */
+.ach-card {
+  background: linear-gradient(135deg, rgba(16,26,40,0.8), rgba(6,10,16,0.95));
+  border: 1px solid rgba(40,224,255,0.12);
+  border-radius: 12px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transition: all 0.25s var(--ease-smooth);
+}
+.ach-card:hover {
+  transform: perspective(var(--3d-persp)) rotateX(3deg) translateY(-3px);
+  border-color: rgba(40,224,255,0.35);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5), var(--neon-cyan);
+}
+.ach-card.unlocked {
+  border-color: rgba(57,255,158,0.35);
+  box-shadow: inset 0 0 20px rgba(57,255,158,0.06);
+}
+.ach-card.unlocked::after {
+  content: '';
+  position: absolute;
+  top: -40%; left: -40%; width: 80%; height: 80%;
+  background: radial-gradient(circle, rgba(57,255,158,0.08), transparent 60%);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------
+   8. SETTINGS — Liquid Switches & Sliders
+   --------------------------------------------------------- */
+.switch-liquid {
+  width: 56px; height: 26px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(4,8,14,0.7);
+  position: relative; cursor: pointer;
+  border-radius: 13px; flex: none;
+  transition: 0.3s;
+  backdrop-filter: blur(4px);
+}
+.switch-liquid::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  background: linear-gradient(180deg, #fff, #ccc);
+  border-radius: 50%;
+  transition: all 0.35s var(--ease-spring);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+.switch-liquid.on {
+  border-color: rgba(40,224,255,0.5);
+  background: rgba(10,40,54,0.85);
+  box-shadow: inset 0 0 12px rgba(40,224,255,0.15), 0 0 12px rgba(40,224,255,0.1);
+}
+.switch-liquid.on::after {
+  left: 32px;
+  background: linear-gradient(180deg, #28e0ff, #0aa8cc);
+  box-shadow: 0 0 12px rgba(40,224,255,0.6);
+}
+
+/* Range slider sci-fi */
+input[type=range].sci-fi-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 160px;
+  height: 4px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+  outline: none;
+}
+input[type=range].sci-fi-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #28e0ff, #0aa8cc);
+  border: 2px solid rgba(255,255,255,0.3);
+  box-shadow: 0 0 10px rgba(40,224,255,0.5);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+input[type=range].sci-fi-range::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+}
+
+/* ---------------------------------------------------------
+   9. TOAST — Holographic Pop
+   --------------------------------------------------------- */
+.toast-holo {
+  background: rgba(8, 16, 26, 0.88);
+  border: 1px solid rgba(40, 224, 255, 0.22);
+  border-left: 3px solid var(--cyan);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.5), var(--neon-cyan);
+  backdrop-filter: blur(14px) saturate(1.3);
+  border-radius: 8px;
+  padding: 12px 18px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #eaf7ff;
+  animation: toast-in 0.35s var(--ease-power) forwards;
+}
+@keyframes toast-in {
+  0%   { opacity: 0; transform: translateY(-12px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------------------------------------------------------
+   10. PARTICLE BG CANVAS (Menu overlay)
+   --------------------------------------------------------- */
+#menuParticleCanvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.55;
+}
+
+/* ---------------------------------------------------------
+   11. LOADING BAR — Reactor Core
+   --------------------------------------------------------- */
+.load-bar {
+  width: clamp(200px, 40vw, 420px);
+  height: 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+  margin-top: 24px;
+}
+.load-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan2), var(--cyan), #fff);
+  box-shadow: 0 0 14px var(--cyan-glow);
+  border-radius: 2px;
+  transition: width 0.2s linear;
+  position: relative;
+}
+.load-bar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: -3px;
+  width: 10px; height: 10px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #fff, 0 0 24px var(--cyan);
+}
+
+/* ---------------------------------------------------------
+   12. RESPONSIVE REDUCED MOTION
+   --------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .btn-3d, .diff-opt, .save-card, .skin-card, .ach-card {
+    transition: none !important;
+    transform: none !important;
+  }
+  .screen.active, .decode-in, .toast-holo {
+    animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------
+   13. LAN ROOM CODE — Big Hologram
+   --------------------------------------------------------- */
+#lanRoomCode {
+  font-size: clamp(40px, 8vw, 72px);
+  letter-spacing: clamp(10px, 2vw, 22px);
+  font-weight: 900;
+  color: #fff;
+  text-align: center;
+  padding: 22px;
+  text-shadow: 0 0 20px rgba(40,224,255,0.7), 0 0 50px rgba(40,224,255,0.3);
+  background: rgba(4,8,14,0.5);
+  border-radius: 12px;
+  border: 1px solid rgba(40,224,255,0.2);
+  backdrop-filter: blur(8px);
+  position: relative;
+  overflow: hidden;
+}
+#lanRoomCode::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(40,224,255,0.06), transparent);
+  animation: code-shimmer 3s infinite;
+}
+@keyframes code-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}

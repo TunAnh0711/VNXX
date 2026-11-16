@@ -96,16 +96,17 @@ function renderWeapons(game, pr) {
    EQUIP WEAPON
    ========================================================= */
 function equipWeapon(game, id) {
-  const pr = game.profile;
-  pr.weapon = id;
-
-  if (game.world) {
-    game.world.player.weaponId = id;
+  /* Delegate sang Game.equipWeapon để áp đúng mag/reload mul */
+  if (game && typeof game.equipWeapon === 'function') {
+    game.equipWeapon(id);
+  } else {
+    /* Fallback nếu hook chưa có */
+    const pr = game.profile;
+    pr.weapon = id;
+    if (game.world) game.world.player.weaponId = id;
+    Sound.sfx('button');
+    addToast('TRANG BỊ: ' + WEAPONS[id].name);
   }
-
-  Sound.sfx('button');
-  addToast('TRANG BỊ: ' + WEAPONS[id].name);
-
   renderInventory();
 }
 

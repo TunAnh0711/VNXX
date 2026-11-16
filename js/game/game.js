@@ -26,15 +26,17 @@ import {
 /* ---------- SYSTEMS ---------- */
 import Sound from '../systems/sound.js';
 import Save from '../systems/save.js';
+import Wardrobe from '../systems/wardrobe.js';
 import { Fx, FloatText } from '../systems/fx.js';
 
 /* ---------- GAME MODULES ---------- */
-import { buildWorld, updateCamera } from './world.js';
+import { buildWorld, updateCamera, applyMagazineMul } from './world.js';
 import {
   updatePlayer,
   doDash as dashImpl,
   useConsumable as useConsumableImpl,
-  updateBeams
+  updateBeams,
+  startReload
 } from './player.js';
 import {
   updateEnemies,
@@ -43,6 +45,9 @@ import {
 } from './enemy.js';
 import { spawnBoss, updateBoss } from './boss.js';
 import { updateProjectiles } from './projectile.js';
+import { updateHazards, updateProps } from './hazards.js';
+import { updateCombo } from '../systems/combo.js';
+import { updateOverdrive, activateOverdrive, isOverdrive } from './overdrive.js';
 import {
   startWave, updateWave, completeWave
 } from './waves.js';
@@ -101,6 +106,12 @@ const Game = {
   _selDiff: 'normal',
   _last: 0,
 
+  /* Game feel */
+  _hitStop: 0,
+  _flash: 0,
+  _flashColor: '#ffffff',
+  _danger: 0,
+
   /* =========================================================
      INIT
      ========================================================= */
@@ -119,6 +130,21 @@ const Game = {
     }
 
     requestAnimationFrame((t) => this.loop(t));
+  },
+
+  /* =========================================================
+     GAME FEEL — hit-stop + screen flash
+     ========================================================= */
+
+  /** Khựng hình ngắn (giây). Cộng dồn có trần để không đơ máy. */
+  hitStop(sec) {
+    this._hitStop = Math.min(.09, Math.max(this._hitStop || 0, sec));
+  },
+
+  /** Nháy sáng toàn màn hình. alpha 0..1. */
+  flash(alpha, color) {
+    this._flash = Math.min(1, Math.max(this._flash || 0, alpha));
+    this._flashColor = color || '#ffffff';
   },
 
   /* =========================================================
@@ -191,6 +217,9 @@ const Game = {
       }
     }
 
+    /* Flash màn hình tàn dần */
+    if (this._flash > 0) this._flash = Math.max(0, this._flash - dt * 3.2);
+
     const Canvas2D = window.VNXX?.Canvas2D;
     if (Canvas2D) Canvas2D.render();
 
@@ -204,6 +233,14 @@ const Game = {
     const W = this.world;
     if (!W) return;
 
+    /* ---------- HIT-STOP ----------
+       Khựng hình vài chục ms khi trúng đòn nặng → cảm giác lực hơn.
+       Không áp dụng cho timer thật của game (chỉ scale mô phỏng). */
+    if (this._hitStop > 0) {
+      this._hitStop = Math.max(0, this._hitStop - dt);
+      dt *= .08;
+    }
+
     W.time += dt;
     this.playTimer += dt;
     if (this.profile) this.profile.statistics.playTime += dt;
@@ -213,8 +250,13 @@ const Game = {
     updateProjectiles(this, W, dt);
     updateLoot(this, W, dt);
     updateChests(W, dt);
-    updateBeams(W, dt);           // ← THÊM DÒNG NÀY
+    updateBeams(W, dt);
+    updateHazards(this, W, dt);
+    updateProps(this, W, dt);
     updateWave(this, W, dt);
+
+    updateCombo(W, W.player, dt);
+    updateOverdrive(W, dt);
 
     Fx.update(W.particles, dt);
     FloatText.update(W.texts, dt);
@@ -244,6 +286,17 @@ const Game = {
       const el = document.getElementById('bossFill');
       if (el) el.style.width = clamp(W.boss.hp / W.boss.maxHp, 0, 1) * 100 + '%';
     }
+
+    /* Nhạc: độ căng theo combo / máu / tiến trình boss */
+    let danger = 0;
+    if (W.boss) {
+      danger = 1 - clamp(W.boss.hp / W.boss.maxHp, 0, 1);
+    } else if (W.combo) {
+      danger = clamp(W.combo.count / 70, 0, .55);
+    }
+    if (W.player.hp / W.player.maxHp < .35) danger = Math.max(danger, .45);
+    Sound.setDanger(danger);
+    this._danger = danger;
   },
 
   /* =========================================================
@@ -258,6 +311,7 @@ const Game = {
         else if (k === 'q')   this.cycleWeapon();
         else if (k === 'e')   this.doDash();
         else if (k === 'r')   this.useConsumable('medkit');
+        else if (k === 'f')   this.doOverdrive();
         else if (k === 'F3')  this.toggleDebug();
         break;
 
@@ -403,7 +457,7 @@ const Game = {
       } else {
         const l = document.createElement('div');
         l.className = 'intro-logo';
-        l.textContent = 'VNXX';
+        l.textContent = 'HALF NIFE';
         el.appendChild(l);
         setTimeout(() => {
           if (this.state === ST.INTRO) this.skipIntro();
@@ -592,15 +646,20 @@ const Game = {
     const stage = getStage(profile.currentStage);
     const loadTxt = document.getElementById('loadTxt');
     const loadSub = document.getElementById('loadSub');
+    const loadFill = document.getElementById('loadBarFill');
     if (loadTxt) loadTxt.textContent = 'LOADING STAGE ' + String(stage.id).padStart(2, '0');
     if (loadSub) {
       loadSub.textContent = stage.lore + '\n' +
         (profile.hardcore ? '☠ HARDCORE — CHẾT LÀ HẾT.'
                           : 'ĐỘ KHÓ: ' + DIFFICULTIES[profile.difficulty].name);
     }
+    if (loadFill) loadFill.style.width = '25%';
 
     setTimeout(() => {
+      if (this.state !== ST.LOADING || this.profile !== profile) return;
+      if (loadFill) loadFill.style.width = '60%';
       this.buildWorld(profile, isNew);
+      if (loadFill) loadFill.style.width = '100%';
       this.setState(isBossWave(profile.currentStage, profile.currentWave)
         ? ST.BOSS : ST.PLAYING);
       hideAllScreens();
@@ -615,7 +674,12 @@ const Game = {
      BUILD WORLD — delegate
      ========================================================= */
   buildWorld(profile, isNew) {
+    /* Trang phục phải nạp trước khi render frame đầu */
+    Wardrobe.load(profile);
     this.world = buildWorld(this, profile, isNew);
+    if (this.world && this.world.player) {
+      this.world.player.skin = Wardrobe.id;
+    }
   },
 
   /* =========================================================
@@ -734,19 +798,40 @@ const Game = {
     if (window.VNXX?.syncSettingsUI) window.VNXX.syncSettingsUI();
 
     const backBtn = document.querySelector('#screen-settings [data-act="back-settings"]');
-    if (backBtn) {
-      backBtn.onclick = () => {
-        Sound.sfx('button');
-        if (from === 'pause' || from === 'hud') {
-          this.setState(ST.PAUSED);
-          showScreen(ST.PAUSED);
-          this.updatePauseStats();
-        } else if (from === 'game') {
-          this.resume();
-        } else {
-          this.toMainMenu();
-        }
-      };
+    if (backBtn) backBtn.onclick = () => this._settingsBack();
+
+    /* ESC fallback — tránh kẹt màn nếu nút back bị che (cùng lớp bug level-up) */
+    this._unbindSettingsEsc();
+    this._settingsEscHandler = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); this._settingsBack(); }
+    };
+    document.addEventListener('keydown', this._settingsEscHandler);
+  },
+
+  /* Quay lại từ màn CÀI ĐẶT (dùng cho cả nút BACK và phím ESC) */
+  _settingsBack() {
+    this._unbindSettingsEsc();
+    Sound.sfx('button');
+    const from = this._settingsFrom;
+    if (from === 'pause' || from === 'hud') {
+      this.setState(ST.PAUSED);
+      showScreen(ST.PAUSED);
+      this.updatePauseStats();
+    } else if (from === 'game') {
+      /* Quay lại chơi an toàn (không phụ thuộc guard PAUSED của resume) */
+      this.setState(ST.PLAYING);
+      hideAllScreens();
+      this.paused = false;
+      if (this.pendingLevelUps > 0) queueLevelUp(this);
+    } else {
+      this.toMainMenu();
+    }
+  },
+
+  _unbindSettingsEsc() {
+    if (this._settingsEscHandler) {
+      document.removeEventListener('keydown', this._settingsEscHandler);
+      this._settingsEscHandler = null;
     }
   },
 
@@ -780,20 +865,65 @@ const Game = {
   /* =========================================================
      PLAYER ACTIONS
      ========================================================= */
-  cycleWeapon() {
-    if (!this.world) return;
-    const owned = this.profile.inventory.weapons;
-    if (owned.length < 2) return;
-    const i = owned.indexOf(this.world.player.weaponId);
-    const next = owned[(i + 1) % owned.length];
-    this.world.player.weaponId = next;
-    this.profile.weapon = next;
-    addToast('VŨ KHÍ: ' + WEAPONS[next].name);
-    Sound.sfx('button');
-  },
+cycleWeapon() {
+  if (!this.world) return;
+  const owned = this.profile.inventory.weapons;
+  if (owned.length < 2) return;
+  const i = owned.indexOf(this.world.player.weaponId);
+  const next = owned[(i + 1) % owned.length];
+
+  this.equipWeapon(next);
+},
+
+/* =========================================================
+   EQUIP WEAPON — dùng chung cho cycleWeapon + UI
+   Áp đúng magazineMul và reloadSpeedMul từ upgrade
+   ========================================================= */
+equipWeapon(id) {
+  if (!this.world) return;
+  const p = this.world.player;
+  const w = WEAPONS[id];
+  if (!w) return;
+
+  p.weaponId = id;
+  this.profile.weapon = id;
+
+  /* Base magazine (không nhân mul) */
+  p.baseMagazine = w.magazine || 0;
+
+  /* Áp magazineMul upgrade — KHÔNG bị reset khi đổi súng */
+  p.magMax = applyMagazineMul(p.baseMagazine, p.up.magazineMul || 0);
+  p.magAmmo = p.magMax;
+
+  p.reloading = false;
+  p.reloadTimer = 0;
+
+  /* Áp reloadSpeedMul — duration ban đầu (chỉ để hiển thị) */
+  const speedMul = Math.max(0.3, 1 + (p.up.reloadSpeedMul || 0));
+  p.reloadDuration = (w.reloadTime || 0) / speedMul;
+
+  /* Huỷ charge nếu đang charge railgun cũ */
+  if (p.charging) {
+    p.charging = false;
+    p.chargeTime = 0;
+    p._chargeReady = false;
+  }
+
+  addToast('VŨ KHÍ: ' + w.name);
+  Sound.sfx('button');
+},
 
   doDash() {
     if (this.world) dashImpl(this, this.world);
+  },
+
+  doOverdrive() {
+    if (!this.world) return false;
+    return activateOverdrive(this, this.world);
+  },
+
+  isOverdrive() {
+    return this.world ? isOverdrive(this.world) : false;
   },
 
   useConsumable(id) {
@@ -1130,11 +1260,21 @@ Game.queueLevelUp = function () {
 };
 
 Game.damageEnemy = function (e, dmg, crit, source, knockback) {
+  const before = e && typeof e.hp === 'number' ? e.hp : 0;
   damageEnemyImpl(this, this.world, e, dmg, crit, source, knockback);
+  const dealt = before - (e && typeof e.hp === 'number' ? e.hp : 0);
+
+  /* Game feel: chí mạng khựng lâu hơn đòn thường */
+  if (dealt > 0) {
+    if (crit) this.hitStop(.030);
+    else if (e && e.isBoss) this.hitStop(.016);
+    else if (dealt >= 120) this.hitStop(.020);
+  }
 };
 
 Game.killEnemy = function (e) {
   killEnemyImpl(this, this.world, e);
+  if (e && e.isBoss) this.flash(.30, '#ffc44d');
 };
 
 Game.updateBoss = function (b, dt) {

@@ -99,6 +99,11 @@ const Net = {
   connect(cb) {
     if (this.ws && this.ws.readyState === 1) return cb();
 
+    if (location.protocol === 'file:') {
+      this._toast('HÃY CHẠY server.js RỒI MỞ BẰNG http://...');
+      return;
+    }
+
     const url = `ws://${location.hostname}:${location.port || 3000}`;
     try {
       this.ws = new WebSocket(url);
@@ -588,7 +593,7 @@ const Net = {
         input: {
           mv: Input.moveVector(),
           angle,
-          attack: Input.isDown(' ')
+          attack: !!(Input.mouse && Input.mouse.down)
         }
       }
     });

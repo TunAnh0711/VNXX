@@ -13,6 +13,13 @@ import { SCREEN_MAP } from '../core/constants.js';
    - Nếu key là screenId hợp lệ → dùng trực tiếp
    - Nếu key falsy → ẩn hết
    ========================================================= */
+/* =========================================================
+   SHOW SCREEN BY STATE KEY
+   - key: string state ('MAIN_MENU', 'SETTINGS', ...) hoặc screenId
+   - Nếu key có trong SCREEN_MAP → map sang id
+   - Nếu key là screenId hợp lệ → dùng trực tiếp
+   - Nếu key falsy → ẩn hết
+   ========================================================= */
 export function showScreen(key) {
   /* Ẩn tất cả screen trước */
   document.querySelectorAll('.screen').forEach((s) => {
@@ -25,7 +32,17 @@ export function showScreen(key) {
   const screenId = SCREEN_MAP[key] || key;
   const el = document.getElementById(screenId);
 
-  if (el) el.classList.add('active');
+  if (el) {
+    el.classList.add('active');
+    /* Glitch transition cho các màn UI (không cho gameplay) */
+    const glitchKeys = ['MAIN_MENU', 'SETTINGS', 'LAN', 'WARDROBE', 'ACHIEVEMENTS', 'LOAD', 'SHOP'];
+    if (glitchKeys.includes(key)) {
+      el.classList.remove('glitch-in');
+      void el.offsetWidth;
+      el.classList.add('glitch-in');
+      setTimeout(() => el.classList.remove('glitch-in'), 400);
+    }
+  }
 }
 
 /* =========================================================

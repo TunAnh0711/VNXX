@@ -122,18 +122,33 @@ export function collectLoot(game, W, l) {
       );
       break;
 
-    case 'hp':
-      p.hp = Math.min(p.maxHp, p.hp + l.value);
-      FloatText.add(
-        W.texts,
-        p.x,
-        p.y - 28,
-        '+' + l.value + ' HP',
-        '#39ff9e',
-        13,
-        -40
-      );
+    case 'hp': {
+      if (p.noHeal) {
+        FloatText.add(
+          W.texts,
+          p.x,
+          p.y - 28,
+          'KHÔNG HỒI MÁU',
+          '#ff3b52',
+          12,
+          -40
+        );
+      } else {
+        const healMul = p.healMul != null ? p.healMul : 1;
+        const heal = l.value * healMul;
+        p.hp = Math.min(p.maxHp, p.hp + heal);
+        FloatText.add(
+          W.texts,
+          p.x,
+          p.y - 28,
+          '+' + Math.round(heal) + ' HP',
+          '#39ff9e',
+          13,
+          -40
+        );
+      }
       break;
+    }
 
     case 'shard':
       p.shards += l.value;

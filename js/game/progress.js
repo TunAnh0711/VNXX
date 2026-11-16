@@ -5,7 +5,7 @@
    ========================================================= */
 
 import { CFG, ST, DIFFICULTIES } from '../core/constants.js';
-import { clamp, shuffle, rnd } from '../core/utils.js';
+import { clamp, shuffle, rnd, esc } from '../core/utils.js';
 import { UPGRADES, pickUpgrades } from '../data/upgrades.js';
 import { checkNewAchievements } from '../data/achievements.js';
 import { WEAPONS } from '../data/weapons.js';
@@ -27,7 +27,7 @@ export function xpForLevel(lv) {
 }
 
 /* =========================================================
-   MODULE MODS (wrapper qua data helper)
+   MODULE MODS
    ========================================================= */
 export function moduleMods(profile) {
   return calcModuleMods((profile && profile.equippedModules) || []);
@@ -41,9 +41,9 @@ export function addXp(game, W, amount) {
 
   const p = W.player;
   const diffMul = DIFFICULTIES[game.profile.difficulty].xp;
+  const comboMul = W.combo ? W.combo.xpMult : 1;
 
-  /* Luck tăng XP nhận vào thêm 30% */
-  p.xp += amount * diffMul * (1 + p.up.luck * .3);
+  p.xp += amount * diffMul * (1 + p.up.luck * .3) * comboMul;
 
   let leveled = false;
 
@@ -67,13 +67,11 @@ export function addXp(game, W, amount) {
 
 /* =========================================================
    QUEUE LEVEL-UP SCREEN
-   Delay 260ms để không đè lên animation level up.
    ========================================================= */
 export function queueLevelUp(game) {
   if (game.pendingLevelUps <= 0) return;
   if (game.state === ST.LEVEL_UP) return;
 
-  /* Không schedule khi đang ở state khác — sẽ retry sau khi thoát */
   const blocked = [
     ST.SHOP, ST.INVENTORY, ST.PAUSED, ST.EVENT,
     ST.GAME_OVER, ST.HARDCORE_DEAD, ST.STAGE_CLEAR
@@ -90,59 +88,175 @@ export function queueLevelUp(game) {
 
 /* =========================================================
    SHOW LEVEL-UP SCREEN
-   Pick 3 upgrade random, render cards, bind click.
    ========================================================= */
 export function showLevelUp(game, W) {
   if (game.pendingLevelUps <= 0) return;
+  _lvChoiceLocked = false;
+
+  /* Không có world/player → không thể hiển thị, ép resume để không bị đơ */
+  if (!W || !W.player) { safeResume(game); return; }
 
   game.paused = true;
   if (game.state !== ST.LEVEL_UP) game._prevState = game.state;
   game.setState(ST.LEVEL_UP);
 
-  const choices = pickUpgrades(3);
   const el = document.getElementById('levelupCards');
   if (!el) {
     console.warn('[progress] #levelupCards không tồn tại');
+    safeResume(game);
     return;
+  }
+
+  let choices = [];
+  try {
+    choices = pickUpgrades(3, [], W.player.up ? (W.player.up.luck || 0) : 0);
+  } catch (err) {
+    console.warn('[progress] pickUpgrades thất bại:', err);
   }
 
   el.innerHTML = '';
 
-  choices.forEach((u) => {
-    const c = document.createElement('div');
-    c.className = 'card';
+  /* Không có lựa chọn nào → cho phép tiếp tục luôn, không kẹt màn hình */
+  if (choices.length === 0) {
+    safeResume(game);
+    return;
+  }
+
+  const levelEl = document.getElementById('levelupLevel');
+  if (levelEl) levelEl.textContent = 'LV ' + W.player.level;
+  const pendingEl = document.getElementById('levelupPending');
+  if (pendingEl) {
+    pendingEl.textContent = game.pendingLevelUps + ' NÂNG CẤP ĐANG CHỜ';
+  }
+
+  const cards = [];
+  const rarityNames = { common: 'THƯỜNG', rare: 'HIẾM', epic: 'SỬ THI' };
+  choices.forEach((u, index) => {
+    const rarity = ['rare', 'epic'].includes(u.rarity) ? u.rarity : 'common';
+    const name = String(u.name || 'NÂNG CẤP');
+    const desc = String(u.desc || '');
+    const c = document.createElement('button');
+    c.type = 'button';
+    c.className = 'card upgrade-card ' + rarity;
+    c.dataset.uid = u.id || '';
+    c.setAttribute?.('aria-label', 'Chọn ' + name + '. ' + desc);
     c.innerHTML =
-      '<div class="ci">' + u.icon + '</div>' +
-      '<div class="cn">' + u.name + '</div>' +
-      '<div class="cd">' + u.desc + '</div>';
+      '<span class="card-key">' + (index + 1) + '</span>' +
+      '<span class="card-rarity">' + (rarityNames[rarity] || rarityNames.common) + '</span>' +
+      '<div class="ci">' + esc(String(u.icon || '◆')) + '</div>' +
+      '<div class="cn">' + esc(name) + '</div>' +
+      '<div class="cd">' + esc(desc) + '</div>' +
+      '<div class="card-choose"><span>CHỌN NÂNG CẤP</span><b>↵</b></div>';
 
-    c.addEventListener('click', () => {
-      /* Áp dụng upgrade */
-      u.apply(W.player);
-      game.pendingLevelUps--;
-
-      Sound.sfx('levelup');
-      syncProfileFromWorld(game);
-      Save.auto(game.profile);
-
-      /* Còn pending → show tiếp, ngược lại đóng */
-      if (game.pendingLevelUps > 0) {
-        showLevelUp(game, W);
-      } else {
-        game.setState(game._prevState || ST.PLAYING);
-        hideAllScreens();
-        game.paused = false;
-      }
-
-      game.updateHUD();
-    });
-
+    c.addEventListener('click', () => chooseUpgrade(game, W, u));
     el.appendChild(c);
+    cards.push(c);
   });
 
   showScreen(ST.LEVEL_UP);
-  Sound.sfx('levelup');
-  Fx.ring(W.particles, W.player.x, W.player.y, '#28e0ff', 140, .6);
+  try { Sound.sfx('levelup'); } catch (e) { /* noop */ }
+  try { Fx.ring(W.particles, W.player.x, W.player.y, '#28e0ff', 140, .6); } catch (e) { /* noop */ }
+
+  bindLevelUpKeys(game, W, cards);
+}
+
+/* Chọn 1 upgrade — chống double-click và luôn đảm bảo thoát dù có lỗi */
+function chooseUpgrade(game, W, u) {
+  if (_lvChoiceLocked || game.state !== ST.LEVEL_UP || !W || !W.player) return;
+  _lvChoiceLocked = true;
+  try {
+    if (u && typeof u.apply === 'function') u.apply(W.player);
+
+    if (!game.profile.pickedUpgradeIds) game.profile.pickedUpgradeIds = [];
+    if (u && u.id) game.profile.pickedUpgradeIds.push(u.id);
+
+    game.pendingLevelUps = Math.max(0, (game.pendingLevelUps || 1) - 1);
+
+    try { Sound.sfx('levelup'); } catch (e) { /* noop */ }
+    syncProfileFromWorld(game);
+    Save.auto(game.profile);
+  } catch (err) {
+    console.warn('[progress] áp upgrade thất bại (vẫn tiếp tục):', err);
+    /* Giảm số lượt để không bao giờ kẹt */
+    game.pendingLevelUps = Math.max(0, (game.pendingLevelUps || 1) - 1);
+  }
+
+  if (game.pendingLevelUps > 0) {
+    showLevelUp(game, W);
+  } else {
+    safeResume(game);
+  }
+
+  try { game.updateHUD(); } catch (e) { /* noop */ }
+}
+
+/* Khôi phục trạng thái chơi — hàm duy nhất đảm bảo không bị đơ */
+function safeResume(game) {
+  _lvChoiceLocked = false;
+  unbindLevelUpKeys();
+  try { game.setState(game._prevState || ST.PLAYING); } catch (e) { /* noop */ }
+  try { hideAllScreens(); } catch (e) { /* noop */ }
+  game.paused = false;
+  try { game.updateHUD(); } catch (e) { /* noop */ }
+}
+
+/* =========================================================
+   ĐIỀU KHIỂN BÀN PHÍM / CHUỘT / TOUCH
+   1/2/3 chọn trực tiếp · mũi tên di chuyển · Enter xác nhận ·
+   Esc tạm đóng. Button thật nên click/tap/Tab đều hoạt động.
+   ========================================================= */
+let _lvKeyHandler = null;
+let _lvChoiceLocked = false;
+let _lvActiveIndex = 0;
+
+function setActiveCard(cards, index) {
+  if (!cards.length) return;
+  _lvActiveIndex = (index + cards.length) % cards.length;
+  cards.forEach((c, i) => c.classList.toggle('selected', i === _lvActiveIndex));
+  try { cards[_lvActiveIndex].focus({ preventScroll: true }); } catch (e) { /* noop */ }
+}
+
+function bindLevelUpKeys(game, W, cards) {
+  unbindLevelUpKeys();
+  setActiveCard(cards, 0);
+
+  _lvKeyHandler = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      safeResume(game);
+      return;
+    }
+    if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.key)) {
+      e.preventDefault();
+      const dir = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 1 : -1;
+      setActiveCard(cards, _lvActiveIndex + dir);
+      return;
+    }
+    if (e.key === 'Enter') {
+      if (cards[_lvActiveIndex]) {
+        e.preventDefault();
+        cards[_lvActiveIndex].click();
+      }
+      return;
+    }
+    if (['1', '2', '3'].includes(e.key)) {
+      const i = parseInt(e.key, 10) - 1;
+      if (cards[i]) {
+        e.preventDefault();
+        setActiveCard(cards, i);
+        cards[i].click();
+      }
+    }
+  };
+
+  document.addEventListener('keydown', _lvKeyHandler);
+}
+
+function unbindLevelUpKeys() {
+  if (_lvKeyHandler) {
+    document.removeEventListener('keydown', _lvKeyHandler);
+    _lvKeyHandler = null;
+  }
 }
 
 /* =========================================================
@@ -169,6 +283,8 @@ export function checkAchievements(game) {
 
 /* =========================================================
    SYNC PROFILE FROM WORLD
+   Ghi runtime state (HP, credits, wave...) từ world → profile.
+   Bao gồm cả 12 stat mới từ upgrade system.
    ========================================================= */
 export function syncProfileFromWorld(game) {
   const W = game.world;
@@ -188,6 +304,17 @@ export function syncProfileFromWorld(game) {
   pr.currentStage = W.stage;
   pr.currentWave = W.wave;
 
+  /* --- Shield / heal state --- */
+  pr.shield = Math.round(p.shield || 0);
+  pr.shieldMax = Math.round(p.shieldMax || 0);
+  pr.noHeal = !!p.noHeal;
+  pr.healMul = p.healMul != null ? p.healMul : 1;
+  pr.shieldRegenEnabled = !!p.shieldRegenEnabled;
+
+  /* --- Magazine --- */
+  pr.baseMagazine = p.baseMagazine || 0;
+  pr.magAmmo = p.magAmmo || 0;
+
   /* --- Statistics --- */
   pr.statistics.highestLevel = Math.max(pr.statistics.highestLevel, p.level);
   pr.statistics.highestWave = Math.max(pr.statistics.highestWave, W.wave);
@@ -196,6 +323,7 @@ export function syncProfileFromWorld(game) {
   const up = pr.upgrades;
   const base = p.upBase || {};
 
+  /* 10 stats cũ */
   up.damageMul      = p.up.damageMul      - (base.damageMul      || 0);
   up.speedMul       = p.up.speedMul       - (base.speedMul       || 0);
   up.critChance     = p.up.critChance     - (base.critChance     || 0);
@@ -206,6 +334,36 @@ export function syncProfileFromWorld(game) {
   up.luck           = p.up.luck           - (base.luck           || 0);
   up.rangeMul       = p.up.rangeMul       - (base.rangeMul       || 0);
   up.dodge          = p.up.dodge          - (base.dodge          || 0);
+
+  /* 12 stats mới */
+  up.reloadSpeedMul   = p.up.reloadSpeedMul   - (base.reloadSpeedMul   || 0);
+  up.magazineMul      = p.up.magazineMul      - (base.magazineMul      || 0);
+  up.shieldMaxMul     = p.up.shieldMaxMul     - (base.shieldMaxMul     || 0);
+  up.pierceAdd        = p.up.pierceAdd        - (base.pierceAdd        || 0);
+  up.splashMul        = p.up.splashMul        - (base.splashMul        || 0);
+  up.spreadMul        = p.up.spreadMul        - (base.spreadMul        || 0);
+  up.projSpeedMul     = p.up.projSpeedMul     - (base.projSpeedMul     || 0);
+  up.armorPen         = p.up.armorPen         - (base.armorPen         || 0);
+  up.elementDamageMul = p.up.elementDamageMul - (base.elementDamageMul || 0);
+  up.dashCdMul        = p.up.dashCdMul        - (base.dashCdMul        || 0);
+  up.dashDistanceMul  = p.up.dashDistanceMul  - (base.dashDistanceMul  || 0);
+  up.regen            = p.up.regen            - (base.regen            || 0);
+
+  /* 11 stats combat v2 */
+  up.statusPowerMul   = p.up.statusPowerMul   - (base.statusPowerMul   || 0);
+  up.statusDurMul     = p.up.statusDurMul     - (base.statusDurMul     || 0);
+  up.poiseMul         = p.up.poiseMul         - (base.poiseMul         || 0);
+  up.executeMul       = p.up.executeMul       - (base.executeMul       || 0);
+  up.comboDmgMul      = p.up.comboDmgMul      - (base.comboDmgMul      || 0);
+  up.comboWindowMul   = p.up.comboWindowMul   - (base.comboWindowMul   || 0);
+  up.odGainMul        = p.up.odGainMul        - (base.odGainMul        || 0);
+  up.odDurAdd         = p.up.odDurAdd         - (base.odDurAdd         || 0);
+  up.chainAdd         = p.up.chainAdd         - (base.chainAdd         || 0);
+  up.breakDmgMul      = p.up.breakDmgMul      - (base.breakDmgMul      || 0);
+  up.killHeal         = p.up.killHeal         - (base.killHeal         || 0);
+
+  /* extraStatus là mảng — lưu nguyên */
+  up.extraStatus = Array.isArray(p.up.extraStatus) ? p.up.extraStatus.slice() : [];
 
   up.maxHpMul = (p.maxHp / CFG.PLAYER.baseHp) - 1;
 
@@ -242,7 +400,6 @@ export function showStageClear(game) {
 
   game.setState(ST.STAGE_CLEAR);
 
-  /* ---------- Rewards ---------- */
   const bonusCr = 1500 * W.stage;
   const bonusShards = 2 + W.stage;
 
@@ -250,7 +407,6 @@ export function showStageClear(game) {
   p.shards += bonusShards;
   pr.statistics.creditsEarned += bonusCr;
 
-  /* ---------- Stats panel ---------- */
   const statsEl = document.getElementById('scStats');
   if (statsEl) {
     statsEl.innerHTML =
@@ -262,7 +418,6 @@ export function showStageClear(game) {
       statLine('PLAYTIME', fmtTime(pr.statistics.playTime));
   }
 
-  /* ---------- Reward HTML + weapon unlocks ---------- */
   let rewardHtml =
     '<div class="reward-line">+' + fmtNum(bonusCr) + ' CREDITS</div>' +
     '<div class="reward-line">+' + bonusShards + ' VOID SHARDS</div>';
@@ -303,7 +458,6 @@ export function showStageClear(game) {
   const rewEl = document.getElementById('scRewards');
   if (rewEl) rewEl.innerHTML = rewardHtml;
 
-  /* ---------- Persist + music ---------- */
   syncProfileFromWorld(game);
   Save.write(pr);
 
@@ -321,7 +475,6 @@ export function nextStage(game) {
   const pr = game.profile;
   if (!pr) return;
 
-  /* ---------- Đã hết stage ---------- */
   if (isLastStage(pr.currentStage)) {
     alert(
       'BẠN ĐÃ HOÀN THÀNH TOÀN BỘ NỘI DUNG HIỆN CÓ CỦA VNXX.\n' +
@@ -331,21 +484,30 @@ export function nextStage(game) {
     return;
   }
 
-  /* ---------- Sang stage kế ---------- */
+  /* BƯỚC 1: SYNC TRƯỚC */
+  syncProfileFromWorld(game);
+
+  if (game.world && game.world.player) {
+    pr.money = game.world.player.credits;
+    pr.shards = game.world.player.shards;
+  }
+
+  /* BƯỚC 2: TĂNG STAGE */
   const next = nextStageData(pr.currentStage);
+  if (!next) {
+    game.toMainMenu();
+    return;
+  }
 
   pr.currentStage = next.id;
   pr.currentWave = 1;
   pr.hp = pr.maxHp;
 
-  if (game.world) {
-    pr.money = game.world.player.credits;
-    pr.shards = game.world.player.shards;
-  }
+  game.pendingLevelUps = 0;
 
-  syncProfileFromWorld(game);
+  /* BƯỚC 3: LƯU + CHUYỂN */
   Save.write(pr);
-
+  game.world = null;
   game.startRun(pr, false);
 }
 

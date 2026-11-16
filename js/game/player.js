@@ -1,37 +1,115 @@
 /* =========================================================
    VNXX — GAME / PLAYER
-   Update player: movement, dash, aim, attack, buffs, damage.
-   SPACE = tương tác (mở rương) — KHÔNG tấn công
+   Movement, dash, aim, attack, buffs, status, damage.
+
+   Hệ thống mới:
+   - Status effect trên player (burn/poison/bleed DOT, chill/freeze slow)
+   - Perfect Dash → nạp Overdrive
+   - Overdrive ảnh hưởng tốc bắn / sát thương / đạn
+   - Combo: nhận sát thương → mất chuỗi
    ========================================================= */
 
 import { CFG } from '../core/constants.js';
 import Input from '../core/input.js';
 import Settings from '../core/settings.js';
 import { clamp, angLerp, dist, rnd, TAU } from '../core/utils.js';
-import { WEAPONS } from '../data/weapons.js';
+import { WEAPONS, hasMagazine } from '../data/weapons.js';
 import { CONSUMABLES, consume } from '../data/consumables.js';
 import Sound from '../systems/sound.js';
 import { Fx, FloatText } from '../systems/fx.js';
 import { collideWithObstacles } from './world.js';
+import * as Status from '../systems/status.js';
+import { comboOnHurt } from '../systems/combo.js';
+import { isOverdrive, chargeFromPerfectDash } from './overdrive.js';
 
 /* =========================================================
-   UPDATE PLAYER (mỗi frame)
+   UPDATE PLAYER
    ========================================================= */
 export function updatePlayer(game, W, dt) {
   const p = W.player;
   if (!p.alive) return;
 
+  updatePlayerStatus(game, W, p, dt);
   updateBuffs(p, dt);
   updateMovement(W, p, dt);
   updateAim(game, W, p, dt);
   updateTimers(p, dt);
+  updateReload(game, W, p, dt);
   handleInput(game, W, p, dt);
   updateChargeVisual(W, p, dt);
   updateChestPrompt(W, p);
 }
 
 /* =========================================================
-   BUFFS
+   STATUS TRÊN PLAYER
+   ========================================================= */
+function updatePlayerStatus(game, W, p, dt) {
+  const total = Status.tickStatus(p, dt, (dmg) => {
+    if (game.godMode) return;
+    p.hp -= dmg;
+    if (Math.random() < .3) {
+      FloatText.add(W.texts, p.x + rnd(-12, 12), p.y - 30,
+        '-' + Math.round(dmg), '#ff7a2f', 11);
+    }
+    if (p.hp <= 0) {
+      p.hp = 0;
+      game.onPlayerDeath();
+    }
+  });
+
+  /* hiệu ứng thị giác */
+  if (p.statusTint && Math.random() < .25) {
+    Fx.spawn(W.particles, p.x + rnd(-14, 14), p.y + rnd(-14, 14),
+      0, -24, .4, 2.5, p.statusTint);
+  }
+}
+
+/* =========================================================
+   RELOAD
+   ========================================================= */
+function updateReload(game, W, p, dt) {
+  if (!p.reloading) return;
+
+  p.reloadTimer -= dt;
+
+  if (p.reloadTimer <= 0) {
+    p.reloading = false;
+    p.reloadTimer = 0;
+    p.magAmmo = p.magMax;
+
+    Sound.sfx('pickup');
+
+    if (W && W.particles) {
+      Fx.burst(W.particles, p.x, p.y, 4, '#9ff2ff', 90, .3, 3);
+    }
+  }
+}
+
+export function startReload(game, W, p) {
+  if (p.reloading) return false;
+
+  const w = WEAPONS[p.weaponId];
+  if (!w) return false;
+  if (!hasMagazine(p.weaponId)) return false;
+  if (p.magAmmo >= p.magMax) return false;
+
+  p.reloading = true;
+
+  const speedMul = Math.max(0.3, 1 + (p.up.reloadSpeedMul || 0));
+  p.reloadTimer = (w.reloadTime || 1.5) / speedMul;
+  p.reloadDuration = p.reloadTimer;
+
+  Sound.sfx('button');
+
+  if (typeof window.addToast === 'function') {
+    window.addToast('ĐANG NẠP ĐẠN...');
+  }
+
+  return true;
+}
+
+/* =========================================================
+   BUFFS + REGEN + SHIELD
    ========================================================= */
 function updateBuffs(p, dt) {
   const b = p.buffs;
@@ -39,8 +117,21 @@ function updateBuffs(p, dt) {
   if (b.shield > 0)  b.shield  = Math.max(0, b.shield - dt);
   if (b.berserk > 0) b.berserk = Math.max(0, b.berserk - dt);
 
-  if (b.shield > 0) p.shield = Math.max(0, 60 * (b.shield / 25));
-  else p.shield = 0;
+  if (b.shield > 0) p.shield = Math.max(p.shield, 60 * (b.shield / 25));
+
+  /* ---- Natural regen ---- */
+  if (p.up.regen > 0 && p.hp < p.maxHp && !p.noHeal) {
+    const heal = p.up.regen * p.maxHp * dt;
+    p.hp = Math.min(p.maxHp, p.hp + heal * (p.healMul || 1));
+  }
+
+  /* ---- Shield auto regen ---- */
+  if (p.shieldRegenEnabled && p.shieldMax > 0) {
+    p.shieldRegenTimer -= dt;
+    if (p.shieldRegenTimer <= 0 && p.shield < p.shieldMax) {
+      p.shield = Math.min(p.shieldMax, p.shield + p.shieldMax * 0.15 * dt);
+    }
+  }
 }
 
 /* =========================================================
@@ -49,7 +140,10 @@ function updateBuffs(p, dt) {
 function updateMovement(W, p, dt) {
   const mv = Input.moveVector();
   const berserk = p.buffs.berserk > 0 ? 1.3 : 1;
-  const targetSpeed = p.speed * berserk;
+  const odMul = isOverdrive(W) ? CFG.OVERDRIVE.speedMul : 1;
+  const statusMul = Status.moveMul(p);
+
+  const targetSpeed = p.speed * berserk * odMul * statusMul;
 
   /* Đang charge railgun → giảm tốc 50% */
   const chargeSlow = p.charging ? 0.5 : 1;
@@ -60,8 +154,7 @@ function updateMovement(W, p, dt) {
     p.y += p.dashDir.y * CFG.PLAYER.dashSpeed * dt;
 
     if (Math.random() < .6) {
-      Fx.spawn(W.particles, p.x, p.y,
-        rnd(-40, 40), rnd(-40, 40), .32, 4, '#28e0ff');
+      Fx.spawn(W.particles, p.x, p.y, rnd(-40, 40), rnd(-40, 40), .32, 4, '#28e0ff');
     }
   } else {
     p.vx += mv.x * CFG.PLAYER.accel * berserk * chargeSlow * dt;
@@ -93,7 +186,7 @@ function updateMovement(W, p, dt) {
    AIM
    ========================================================= */
 function updateAim(game, W, p, dt) {
-  const Canvas2D = window.VNXX?.Canvas2D;
+  const Canvas2D = window.VNXX && window.VNXX.Canvas2D;
   if (!Canvas2D || typeof Canvas2D.screenToWorld !== 'function') return;
 
   const world = Canvas2D.screenToWorld(Input.mouse.x, Input.mouse.y);
@@ -116,24 +209,18 @@ function updateTimers(p, dt) {
 }
 
 /* =========================================================
-   INPUT ACTIONS
-   - Chuột trái (giữ)        → tấn công liên tục
-   - Nút 🔥 mobile (giữ)     → tấn công
-   - SPACE                    → CHỈ tương tác (mở rương)
-   - Nút ✋ mobile (tap)     → CHỈ tương tác (mở rương)
-   - Railgun (w.charge > 0)  → giữ chuột để charge, nhả để bắn
+   INPUT
    ========================================================= */
 function handleInput(game, W, p, dt) {
   const w = WEAPONS[p.weaponId];
   if (!w) return;
 
-  /* ===== TƯƠNG TÁC (SPACE hoặc nút ✋ mobile) ===== */
+  /* ===== 1. TƯƠNG TÁC ===== */
   const wantInteract =
     Input.isDown(' ') ||
     (Input.mobile && Input.mobile.interact);
 
   if (wantInteract) {
-    /* Consume tap của mobile (1 lần) */
     if (Input.mobile && Input.mobile.interact) {
       Input.mobile.interact = false;
     }
@@ -142,17 +229,18 @@ function handleInput(game, W, p, dt) {
     if (chest && !chest.open) {
       game.openChest(chest);
     }
-    /* Không có rương gần → không làm gì (không attack) */
     return;
   }
 
-  /* ===== TẤN CÔNG (chuột trái hoặc nút 🔥 mobile) ===== */
+  /* ===== 2. RELOADING ===== */
+  if (p.reloading) return;
+
+  /* ===== 3. TẤN CÔNG ===== */
   const holding =
     Input.mouse.down ||
     (Input.mobile && Input.mobile.attack);
 
   if (!holding) {
-    /* Không giữ nút tấn công → nếu đang charge railgun thì nhả ra */
     if (p.charging) {
       if (p.chargeTime >= w.charge) {
         fireRailgun(game, W, p, w);
@@ -168,7 +256,7 @@ function handleInput(game, W, p, dt) {
     return;
   }
 
-  /* ============ VŨ KHÍ CHARGE (railgun) ============ */
+  /* ===== CHARGE WEAPON ===== */
   if (w.charge > 0) {
     if (!p.charging) {
       p.charging = true;
@@ -181,8 +269,23 @@ function handleInput(game, W, p, dt) {
     return;
   }
 
-  /* ============ VŨ KHÍ THƯỜNG ============ */
-  playerAttack(game, W, p);
+  /* ===== VŨ KHÍ THƯỜNG ===== */
+  const freeAmmo = isOverdrive(W) && CFG.OVERDRIVE.freeAmmo;
+
+  if (!freeAmmo && hasMagazine(p.weaponId) && p.magAmmo <= 0) {
+    startReload(game, W, p);
+    return;
+  }
+
+  const fired = playerAttack(game, W, p);
+
+  if (fired && hasMagazine(p.weaponId) && !freeAmmo) {
+    p.magAmmo--;
+
+    if (p.magAmmo <= 0) {
+      startReload(game, W, p);
+    }
+  }
 }
 
 /* =========================================================
@@ -243,7 +346,11 @@ function fireRailgun(game, W, p, w) {
   const range = w.range * (1 + p.up.rangeMul);
   const halfWidth = w.beamWidth || 12;
 
-  const dmgBase = w.damage * w.chargeDamageMul * (1 + p.up.damageMul);
+  let dmgBase = w.damage * w.chargeDamageMul * (1 + p.up.damageMul);
+  dmgBase *= (1 + (p.up.elementDamageMul || 0));
+  if (W.combo) dmgBase *= W.combo.mult;
+  if (isOverdrive(W)) dmgBase *= CFG.OVERDRIVE.dmgMul;
+
   const critC = w.critChance + (p.up.critChance || 0);
   const critM = w.critMul + (p.up.critMul || 0);
 
@@ -275,8 +382,7 @@ function fireRailgun(game, W, p, w) {
   p.vx -= dirX * recoil;
   p.vy -= dirY * recoil;
 
-  const smokeCount = 24;
-  for (let i = 0; i < smokeCount; i++) {
+  for (let i = 0; i < 24; i++) {
     const a = p.angle + Math.PI + (Math.random() - 0.5) * 1.2;
     const spd = 120 + Math.random() * 300;
 
@@ -346,7 +452,7 @@ export function updateBeams(W, dt) {
 }
 
 /* =========================================================
-   CHEST PROMPT UI
+   CHEST PROMPT
    ========================================================= */
 function updateChestPrompt(W, p) {
   const prompt = document.getElementById('interactPrompt');
@@ -367,7 +473,7 @@ function updateChestPrompt(W, p) {
 }
 
 /* =========================================================
-   FIND NEAREST CHEST
+   NEAREST CHEST
    ========================================================= */
 export function getNearbyChest(W, p) {
   let best = null;
@@ -385,21 +491,29 @@ export function getNearbyChest(W, p) {
    ATTACK
    ========================================================= */
 export function playerAttack(game, W, p) {
-  if (p.cooldown > 0) return;
+  if (p.cooldown > 0) return false;
 
   const w = WEAPONS[p.weaponId];
-  if (!w) return;
+  if (!w) return false;
 
-  if (w.charge > 0) return;
+  if (w.charge > 0) return false;
+  if (p.reloading) return false;
 
   const berserk = p.buffs.berserk > 0 ? .55 : 1;
-  const cd = 1 / (w.fireRate * (1 + p.up.attackSpeedMul) * berserk);
+  const odRate = isOverdrive(W) ? CFG.OVERDRIVE.fireRateMul : 1;
+
+  const cd = 1 / (w.fireRate * (1 + p.up.attackSpeedMul) * berserk * odRate);
 
   p.cooldown = cd;
   p.attackAnim = .16;
 
-  const dmgBase = w.damage * (1 + p.up.damageMul) *
+  let dmgBase = w.damage * (1 + p.up.damageMul) *
     (p.buffs.dmg > 0 ? 1.6 : 1);
+
+  /* combo + overdrive */
+  if (W.combo) dmgBase *= W.combo.mult;
+  if (isOverdrive(W)) dmgBase *= CFG.OVERDRIVE.dmgMul;
+
   const range = w.range * (1 + p.up.rangeMul);
   const critC = w.critChance + (p.up.critChance || 0);
   const critM = w.critMul + (p.up.critMul || 0);
@@ -409,6 +523,8 @@ export function playerAttack(game, W, p) {
   } else {
     rangedAttack(game, W, p, w, dmgBase, critC, critM);
   }
+
+  return true;
 }
 
 /* ---------- MELEE ---------- */
@@ -420,6 +536,8 @@ function meleeAttack(game, W, p, w, dmgBase, range, critC, critM) {
 
   for (let i = 0; i < W.enemies.length; i++) {
     const e = W.enemies[i];
+    if (!e.alive) continue;
+
     const d = dist(e, p);
     if (d > range + e.radius) continue;
 
@@ -453,19 +571,43 @@ function meleeAttack(game, W, p, w, dmgBase, range, critC, critM) {
 /* ---------- RANGED ---------- */
 function rangedAttack(game, W, p, w, dmgBase, critC, critM) {
   const id = w.id;
-  const snd = id === 'shotgun' ? 'shotgun' : (id === 'sniper' ? 'sniper' : 'shoot');
+  const snd = (id === 'shotgun' || id === 'flak') ? 'shotgun'
+    : (id === 'sniper' || id === 'railgun' || id === 'cryo') ? 'sniper'
+    : id === 'tesla' ? 'laser'
+    : id === 'hunter' ? 'hunter'
+    : 'shoot';
   Sound.sfx(snd);
 
-  const count = w.projectileCount;
-  const spd = w.projectileSpeed *
+  /* Điểm nhấn riêng cho từng loại đạn đặc biệt */
+  if (id === 'ricochet') Sound.sfx('ricochet');
+  else if (id === 'cryo') Sound.sfx('freeze');
+  else if (id === 'tesla') Sound.sfx('chain');
+
+  const count = w.projectileCount || 1;
+
+  const projSpeedMul  = Math.max(0.3, 1 + (p.up.projSpeedMul  || 0));
+  const spreadMul     = Math.max(0.3, 1 + (p.up.spreadMul     || 0));
+  const splashMul     = Math.max(0,   1 + (p.up.splashMul     || 0));
+  const pierceAdd     = Math.round(p.up.pierceAdd || 0);
+  const armorPen      = p.up.armorPen         || 0;
+  const elementDamageMul = p.up.elementDamageMul || 0;
+
+  const spd = (w.projectileSpeed || 700) *
     (1 + p.up.rangeMul * .4) *
+    projSpeedMul *
     (W.lowGravity ? .6 : 1);
+
+  const effectiveSpread = (w.spread || 0) * spreadMul;
+  const effectivePierce = (w.penetration || 0) + pierceAdd;
+  const effectiveSplash = (w.splash || 0) * splashMul;
+
+  const chainCount = (w.chain ? w.chain.count : 0) + (p.up.chainAdd || 0);
 
   for (let i = 0; i < count; i++) {
     const spreadA = (count > 1
-      ? (i / (count - 1) - .5) * 2 * w.spread
+      ? (i / (count - 1) - .5) * 2 * effectiveSpread
       : 0)
-      + (Math.random() - .5) * w.spread * .5;
+      + (Math.random() - .5) * effectiveSpread * .5;
 
     const a = p.angle + spreadA;
     const crit = Math.random() < critC;
@@ -476,29 +618,44 @@ function rangedAttack(game, W, p, w, dmgBase, critC, critM) {
       y: p.y + Math.sin(a) * 22,
       vx: Math.cos(a) * spd,
       vy: Math.sin(a) * spd,
-      r: id === 'rocket' ? 7 : (id === 'plasma' ? 9 : 4),
+      r: projRadius(id),
       damage: dmg,
       owner: 'player',
-      life: w.range / spd + .15,
-      pierce: w.penetration,
-      splash: w.splash,
+      life: (w.range || 400) / spd + .15,
+      pierce: effectivePierce,
+      splash: effectiveSplash,
       crit,
-      knockback: w.knockback,
+      knockback: w.knockback || 0,
+      armorPen,
+      elementDamageMul,
       color: crit
         ? '#ffc44d'
-        : (w.rarity === 'mythic' ? '#ff5ad0' : '#28e0ff'),
+        : (w.rarity === 'mythic' ? '#ff5ad0' : projColor(id)),
       hitSet: new Set(),
-      trail: id === 'sniper',
+      trail: id === 'sniper' || id === 'railgun' || id === 'needler' || id === 'hunter' || id === 'cryo' || id === 'ricochet',
       weaponId: id,
-      size: w.splash > 0 ? 1.4 : 1
+      size: effectiveSplash > 0 ? 1.4 : 1,
+
+      /* lan sét */
+      chain: chainCount > 0
+        ? { count: chainCount, range: w.chain ? w.chain.range : 220, falloff: w.chain ? w.chain.falloff : .7 }
+        : null,
+
+      /* nảy tường */
+      bounce: w.bounce || 0,
+
+      /* bám mục tiêu */
+      homing: w.homing
+        ? { turnRate: w.homing.turnRate, speed: w.homing.speed }
+        : null
     });
   }
 
-  p.vx -= Math.cos(p.angle) * w.knockback * .35;
-  p.vy -= Math.sin(p.angle) * w.knockback * .35;
+  p.vx -= Math.cos(p.angle) * (w.knockback || 0) * .35;
+  p.vy -= Math.sin(p.angle) * (w.knockback || 0) * .35;
 
   if (Settings.get('shakeOn')) {
-    const shake = id === 'sniper' ? 7 : (id === 'rocket' ? 6 : 2.4);
+    const shake = id === 'sniper' ? 7 : (id === 'rocket' || id === 'grenade') ? 6 : 2.4;
     W.camera.shake = Math.min(9, shake);
   }
 
@@ -508,6 +665,34 @@ function rangedAttack(game, W, p, w, dmgBase, critC, critM) {
     p.y + Math.sin(p.angle) * 24,
     3, '#9ff2ff', 160, .18, 3
   );
+}
+
+function projRadius(id) {
+  if (id === 'rocket' || id === 'grenade') return 7;
+  if (id === 'plasma' || id === 'arcgun') return 8;
+  if (id === 'flamer') return 9;
+  if (id === 'voidw') return 6;
+  if (id === 'cryo') return 6;
+  if (id === 'flak') return 5;
+  if (id === 'hunter') return 6;
+  if (id === 'tesla') return 5;
+  if (id === 'ricochet') return 4;
+  return 4;
+}
+
+function projColor(id) {
+  switch (id) {
+    case 'flamer':   return '#ff7a2f';
+    case 'arcgun':   return '#ffe14d';
+    case 'needler':  return '#ff3b52';
+    case 'grenade':  return '#a0ff2b';
+    case 'cryo':     return '#a8e9ff';
+    case 'flak':     return '#ffb02e';
+    case 'hunter':   return '#ff8ae0';
+    case 'tesla':    return '#7df9ff';
+    case 'ricochet': return '#9dff6b';
+    default:         return '#28e0ff';
+  }
 }
 
 /* =========================================================
@@ -535,6 +720,13 @@ export function damagePlayer(game, W, dmg, source) {
   p.invuln = CFG.PLAYER.iframeHit;
   p.hitFlash = .22;
 
+  /* ---- Combo break ---- */
+  comboOnHurt(W, p);
+
+  if (p.shieldRegenEnabled) {
+    p.shieldRegenTimer = p.shieldRegenDelay || 3;
+  }
+
   if (p.charging) {
     p.charging = false;
     p.chargeTime = 0;
@@ -556,11 +748,35 @@ export function damagePlayer(game, W, dmg, source) {
 }
 
 /* =========================================================
+   PERFECT DASH CHECK
+   ========================================================= */
+function perfectDodgeCheck(W, p) {
+  const R = 130;
+
+  for (let i = 0; i < W.projectiles.length; i++) {
+    const pr = W.projectiles[i];
+    if (pr.owner !== 'enemy') continue;
+
+    const dx = p.x - pr.x;
+    const dy = p.y - pr.y;
+    const d = Math.hypot(dx, dy);
+    if (d > R || d < 1) continue;
+
+    const spd = Math.hypot(pr.vx, pr.vy) || 1;
+    const dot = (pr.vx * dx + pr.vy * dy) / (spd * d);
+    if (dot > .88) return true;
+  }
+  return false;
+}
+
+/* =========================================================
    DASH
    ========================================================= */
 export function doDash(game, W) {
   const p = W.player;
   if (p.dashCd > 0) return;
+
+  const perfect = perfectDodgeCheck(W, p);
 
   const mv = Input.moveVector();
   let dx = mv.x;
@@ -573,9 +789,13 @@ export function doDash(game, W) {
 
   const l = Math.hypot(dx, dy) || 1;
   p.dashDir = { x: dx / l, y: dy / l };
-  p.dashTime = CFG.PLAYER.dashTime;
-  p.dashCd = CFG.PLAYER.dashCd;
-  p.invuln = Math.max(p.invuln, CFG.PLAYER.dashTime + .15);
+
+  const cdMul    = Math.max(0.3, 1 - (p.up.dashCdMul       || 0));
+  const distMul  = Math.max(1,   1 + (p.up.dashDistanceMul || 0));
+
+  p.dashTime = CFG.PLAYER.dashTime * distMul;
+  p.dashCd   = CFG.PLAYER.dashCd   * cdMul;
+  p.invuln   = Math.max(p.invuln, p.dashTime + .15);
 
   if (p.charging) {
     p.charging = false;
@@ -585,6 +805,14 @@ export function doDash(game, W) {
 
   Sound.sfx('dash');
   Fx.ring(W.particles, p.x, p.y, '#28e0ff', 60, .3);
+
+  /* ---- Perfect dash → nạp Overdrive ---- */
+  if (perfect) {
+    chargeFromPerfectDash(W, p);
+    Fx.ring(W.particles, p.x, p.y, '#ffc44d', 90, .4);
+    FloatText.add(W.texts, p.x, p.y - 40, 'PERFECT!', '#ffc44d', 16);
+    Sound.sfx('crit');
+  }
 }
 
 /* =========================================================
@@ -596,7 +824,7 @@ export function useConsumable(game, W, id) {
 
   if (!result.ok) {
     if (result.reason === 'empty') {
-      const name = CONSUMABLES[id]?.name || id;
+      const name = (CONSUMABLES[id] && CONSUMABLES[id].name) || id;
       if (typeof window.addToast === 'function') {
         window.addToast('KHÔNG CÒN ' + name);
       }
